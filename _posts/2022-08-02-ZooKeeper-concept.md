@@ -4,7 +4,7 @@ ZooKeeper 数据模型采用层次化的多叉树形结构，每个节点上都�
 强调一句：**ZooKeeper 主要是用来协调服务的，而不是用来存储业务数据的，所以不要放比较大的数据在 znode 上，ZooKeeper 给出的上限是每个结点的数据大小最大是 1M。**
 从下图可以更直观地看出：ZooKeeper 节点路径标识方式和 Unix 文件系统路径非常相似，都是由一系列使用斜杠"/"进行分割的路径表示，开发人员可以向这个节点中写入数据，也可以在节点下面创建子节点。这些操作我们后面都会介绍到。
 
-![](https://cdn.nlark.com/yuque/0/2023/png/28649518/1686919585853-05523262-2145-4d2d-ae64-18526910b22f.png#averageHue=%23f2fbf4&clientId=ue6f9684b-22a2-4&from=paste&id=uab35e3ec&originHeight=406&originWidth=723&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u44203607-8b44-4217-8b68-85ff06787ee&title=)
+![](\images\posts\zookeeper\1686919585853-05523262-2145-4d2d-ae64-18526910b22f.png)
 
 ### znode（数据节点）
 介绍了 ZooKeeper 树形数据模型之后，我们知道每个数据节点在 ZooKeeper 中被称为 **znode**，它是 ZooKeeper 中数据的最小单元。你要存放的数据就放在上面，是你使用 ZooKeeper 过程中经常需要接触到的一个概念。
@@ -36,7 +36,7 @@ ACL 为 Access Control Lists ，它是一种权限控制。在 zookeeper 中定�
 ### Watcher（事件监听器）
 Watcher（事件监听器），是 ZooKeeper 中的一个很重要的特性。ZooKeeper 允许用户在指定节点上注册一些 Watcher，并且在一些特定事件触发的时候，ZooKeeper 服务端会将事件通知到感兴趣的客户端上去，该机制是 ZooKeeper 实现分布式协调服务的重要特性。
 
-![](https://cdn.nlark.com/yuque/0/2023/png/28649518/1686919699054-f6b9ebe1-8241-4dd2-a6c4-2a2c62b0653d.png#averageHue=%23f4fdf6&clientId=ue6f9684b-22a2-4&from=paste&id=u04300068&originHeight=291&originWidth=831&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u97cc1d39-c31b-4bdb-bf5e-8925fd20bcc&title=)
+![](\images\posts\zookeeper\1686919699054-f6b9ebe1-8241-4dd2-a6c4-2a2c62b0653d.png)
 
 ### 会话（Session）
 Session 可以看作是 ZooKeeper 服务器与客户端的之间的一个 TCP 长连接，通过这个连接，客户端能够通过心跳检测与服务器保持有效的会话，也能够向 ZooKeeper 服务器发送请求并接受响应，同时还能够通过该连接接收来自服务器的 Watcher 事件通知。
@@ -46,7 +46,7 @@ Session 有一个属性叫做：sessionTimeout ，sessionTimeout 代表会话的
 ### ZooKeeper 集群角色
 但是，在 ZooKeeper 中没有选择传统的 Master/Slave 概念，而是引入了 Leader、Follower 和 Observer 三种角色。如下图所示
 
-![](https://cdn.nlark.com/yuque/0/2023/png/28649518/1686919836673-e7e7c1db-56a0-44ac-baac-8f7f6f166787.png#averageHue=%23f9f8f5&clientId=ue6f9684b-22a2-4&from=paste&id=u54326026&originHeight=290&originWidth=700&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=ub6de201d-f94c-4544-8509-00a0e22aaa7&title=)
+![](\images\posts\zookeeper\1686919836673-e7e7c1db-56a0-44ac-baac-8f7f6f166787.png)
 
 | 角色 | 说明 |
 | --- | --- |
@@ -77,8 +77,7 @@ ZooKeeper 集群在宕掉几个 ZooKeeper 服务器之后，如果剩下的 ZooK
 ### 消息广播模式
 Leader 将写请求 **广播** 出去呀，让 Leader 问问 Followers 是否同意更新，如果超过半数以上的同意那么就进行 Follower 和 Observer 的更新（和 Paxos 一样）。
 
-![](https://cdn.nlark.com/yuque/0/2023/jpeg/28649518/1686923983358-82df09d0-c309-4706-a112-c4cbdc7dcf1d.jpeg#averageHue=%23d7e5d4&clientId=ue6f9684b-22a2-4&from=paste&id=u5ec61bab&originHeight=489&originWidth=988&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u3598224c-e337-4c05-ade2-b2b6b4cd782&title=)
-
+![](\images\posts\zookeeper\1686923983358-82df09d0-c309-4706-a112-c4cbdc7dcf1d.jpeg)
 `leader`端会为每个其他的 `zkServer`准备了一个 **队列** ，采用先进先出的方式发送消息。由于协议是 **通过 TCP** 来进行网络通信的，保证了消息的发送顺序性，接受顺序性也得到了保证。
 除此之外，在 ZAB 中还定义了一个 **全局单调递增的事务 ID ZXID** ，它是一个 64 位 long 型，其中高 32 位表示 epoch 年代，低 32 位表示事务 id。epoch 是会根据 Leader 的变化而变化的，当一个 Leader 挂了，新的 Leader 上位的时候，年代（epoch）就变了。而低 32 位可以简单理解为递增的事务 id。
 定义这个的原因也是为了顺序性，每个 proposal 在 Leader 中生成后需要 **通过其 ZXID 来进行排序** ，才能得到处理。
@@ -96,8 +95,7 @@ Leader 选举可以分为两个不同的阶段，第一个是我们提到的 Lea
 那么跳过那些已经被丢弃的提案又是什么意思呢？
 假设 Leader (server2) 此时同意了提案 N1，自身提交了这个事务并且要发送给所有 Follower 要 commit 的请求，却在这个时候挂了，此时肯定要重新进行 Leader 的选举，比如说此时选 server1 为 Leader （这无所谓）。但是过了一会，这个 **挂掉的 Leader 又重新恢复了** ，此时它肯定会作为 Follower 的身份进入集群中，需要注意的是刚刚 server2 已经同意提交了提案 N1，但其他 server 并没有收到它的 commit 信息，所以其他 server 不可能再提交这个提案 N1 了，这样就会出现数据不一致性问题了，所以 **该提案 N1 最终需要被抛弃掉** 。
 
-![](https://cdn.nlark.com/yuque/0/2023/jpeg/28649518/1686924603256-b440f982-7490-4b70-bf45-456382a3ad45.jpeg#averageHue=%23fbf8f7&clientId=ue6f9684b-22a2-4&from=paste&id=u63a1614b&originHeight=409&originWidth=1331&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u922e8ced-5261-4af4-a50a-2d3c915737d&title=)
-
+![](\images\posts\zookeeper\1686924603256-b440f982-7490-4b70-bf45-456382a3ad45.jpeg)
 ## 应用场景
 ### 选主
 还记得上面我们的所说的临时节点吗？因为 Zookeeper 的强一致性，能够很好地在保证 **在高并发的情况下保证节点创建的全局唯一性** (即无法重复创建同样的节点)。
@@ -105,8 +103,7 @@ Leader 选举可以分为两个不同的阶段，第一个是我们提到的 Lea
 但是，如果这个 master 挂了怎么办？？？
 你想想为什么我们要创建临时节点？还记得临时节点的生命周期吗？master 挂了是不是代表会话断了？会话断了是不是意味着这个节点没了？还记得 watcher 吗？我们是不是可以 **让其他不是 master 的节点监听节点的状态** ，比如说我们监听这个临时节点的父节点，如果子节点个数变了就代表 master 挂了，这个时候我们 **触发回调函数进行重新选举** ，或者我们直接监听节点的状态，我们可以通过节点是否已经失去连接来判断 master 是否挂了等等。
 
-![](https://cdn.nlark.com/yuque/0/2023/jpeg/28649518/1686924929157-e4b696ee-df8a-415c-b1d3-ce4afe71d225.jpeg#averageHue=%23f8f8f6&clientId=ue6f9684b-22a2-4&from=paste&id=u78135983&originHeight=565&originWidth=1123&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u8f23c399-31f4-4359-a38d-760755a0dbf&title=)
-
+![](\images\posts\zookeeper\1686924929157-e4b696ee-df8a-415c-b1d3-ce4afe71d225.jpeg)
 总的来说，我们可以完全 **利用 临时节点、节点状态 和 watcher 来实现选主的功能**，临时节点主要用来选举，节点状态和watcher 可以用来判断 master 的活性和进行重新选举。
 ### 分布式锁
 分布式锁的实现方式有很多种，比如 Redis、数据库、zookeeper 等。个人认为 zookeeper 在实现分布式锁这方面是非常非常简单的。
@@ -125,11 +122,9 @@ zk 中不需要向 redis 那样考虑锁得不到释放的问题了，因为当�
 别急，它能干的事情还很多呢。可能我们会有这样的需求，我们需要了解整个集群中有多少机器在工作，我们想对集群中的每台机器的运行时状态进行数据采集，对集群中机器进行上下线操作等等。
 而 zookeeper 天然支持的 watcher 和 临时节点能很好的实现这些需求。我们可以为每条机器创建临时节点，并监控其父节点，如果子节点列表有变动（我们可能创建删除了临时节点），那么我们可以使用在其父节点绑定的 watcher 进行状态监控和回调。
 
-![](https://cdn.nlark.com/yuque/0/2023/jpeg/28649518/1686925295204-d1e99c4d-f8c3-40f8-ad39-fcb61c87aa94.jpeg#averageHue=%23faf9f6&clientId=ue6f9684b-22a2-4&from=paste&id=uc48a9876&originHeight=588&originWidth=1082&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u74819ef2-0ac2-4c3e-b082-8531070d153&title=)
-
+![](\images\posts\zookeeper\1686925295204-d1e99c4d-f8c3-40f8-ad39-fcb61c87aa94.jpeg)
 集群管理
 至于注册中心也很简单，我们同样也是让 **服务提供者** 在 zookeeper 中创建一个临时节点并且将自己的 ip、port、调用方式 写入节点，当 **服务消费者** 需要进行调用的时候会 **通过注册中心找到相应的服务的地址列表(IP 端口什么的)** ，并缓存到本地(方便以后调用)，当消费者调用服务时，不会再去请求注册中心，而是直接通过负载均衡算法从地址列表中取一个服务提供者的服务器调用服务。
 当服务提供者的某台服务器宕机或下线时，相应的地址会从服务提供者地址列表中移除。同时，注册中心会将新的服务地址列表发送给服务消费者的机器并缓存在消费者本机（当然你可以让消费者进行节点监听，我记得 Eureka 会先试错，然后再更新）。
 
-![](https://cdn.nlark.com/yuque/0/2023/jpeg/28649518/1686925295215-8b3015c2-3a68-423a-b425-3ad004f823f8.jpeg#averageHue=%23f9f8f6&clientId=ue6f9684b-22a2-4&from=paste&id=u77349602&originHeight=590&originWidth=1204&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u186d5ecd-627c-4022-be05-0a9d30e32a8&title=)
-
+![](\images\posts\zookeeper\1686925295215-8b3015c2-3a68-423a-b425-3ad004f823f8.jpeg)
