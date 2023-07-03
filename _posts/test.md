@@ -126,8 +126,8 @@ Leader 将写请求 **广播** 出去呀，让 Leader 问问 Followers 是否同
 ### 集群管理和注册中心
 看到这里是不是觉得 zookeeper 实在是太强大了，它怎么能这么能干！别急，它能干的事情还很多呢。可能我们会有这样的需求，我们需要了解整个集群中有多少机器在工作，我们想对集群中的每台机器的运行时状态进行数据采集，对集群中机器进行上下线操作等等。而 zookeeper 天然支持的 watcher 和 临时节点能很好的实现这些需求。我们可以为每条机器创建临时节点，并监控其父节点，如果子节点列表有变动（我们可能创建删除了临时节点），那么我们可以使用在其父节点绑定的 watcher 进行状态监控和回调。
 
-![](https://cdn.nlark.com/yuque/0/2023/jpeg/28649518/1686925295204-d1e99c4d-f8c3-40f8-ad39-fcb61c87aa94.jpeg#averageHue=%23faf9f6&clientId=ue6f9684b-22a2-4&from=paste&id=uc48a9876&originHeight=588&originWidth=1082&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u74819ef2-0ac2-4c3e-b082-8531070d153&title=)
+![](\images\posts\zookeeper\1686925295204-d1e99c4d-f8c3-40f8-ad39-fcb61c87aa94.jpeg#averageHue=%23faf9f6&clientId=ue6f9684b-22a2-4&from=paste&id=uc48a9876&originHeight=588&originWidth=1082&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u74819ef2-0ac2-4c3e-b082-8531070d153&title=)
 
 集群管理至于注册中心也很简单，我们同样也是让 **服务提供者** 在 zookeeper 中创建一个临时节点并且将自己的 ip、port、调用方式 写入节点，当 **服务消费者** 需要进行调用的时候会 **通过注册中心找到相应的服务的地址列表(IP 端口什么的)** ，并缓存到本地(方便以后调用)，当消费者调用服务时，不会再去请求注册中心，而是直接通过负载均衡算法从地址列表中取一个服务提供者的服务器调用服务。当服务提供者的某台服务器宕机或下线时，相应的地址会从服务提供者地址列表中移除。同时，注册中心会将新的服务地址列表发送给服务消费者的机器并缓存在消费者本机（当然你可以让消费者进行节点监听，我记得 Eureka 会先试错，然后再更新）。
-![](https://cdn.nlark.com/yuque/0/2023/jpeg/28649518/1686925295215-8b3015c2-3a68-423a-b425-3ad004f823f8.jpeg#averageHue=%23f9f8f6&clientId=ue6f9684b-22a2-4&from=paste&id=u77349602&originHeight=590&originWidth=1204&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u186d5ecd-627c-4022-be05-0a9d30e32a8&title=)
+![](\images\posts\zookeeper\1686925295215-8b3015c2-3a68-423a-b425-3ad004f823f8.jpeg#averageHue=%23f9f8f6&clientId=ue6f9684b-22a2-4&from=paste&id=u77349602&originHeight=590&originWidth=1204&originalType=url&ratio=1.5&rotation=0&showTitle=false&status=done&style=none&taskId=u186d5ecd-627c-4022-be05-0a9d30e32a8&title=)
 
