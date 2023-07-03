@@ -1,3 +1,19 @@
+---
+layout: post
+title: ZooKeeper是什么？为何集群管理离不开它？
+categories: [ZooKeeper]
+description: 本篇主要介绍ZooKeeper的重要概念并列举一些重要的使用场景
+keywords: ZooKeeper
+mermaid: false
+sequence: false
+flow: false
+mathjax: false
+mindmap: false
+mindmap2: false
+---
+
+本篇主要介绍ZooKeeper的重要概念并列举一些重要的使用场景。
+
 ## 重要概念
 ### Data model（数据模型）
 ZooKeeper 数据模型采用层次化的多叉树形结构，每个节点上都可以存储数据，这些数据可以是数字、字符串或者是二级制序列。并且。每个节点还可以拥有 N 个子节点，最上层是根节点以“/”来代表。每个数据节点在 ZooKeeper 中被称为 **znode**，它是 ZooKeeper 中数据的最小单元。并且，每个 znode 都一个唯一的路径标识。
