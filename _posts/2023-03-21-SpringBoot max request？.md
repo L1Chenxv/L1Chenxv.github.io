@@ -17,7 +17,7 @@ SpringBoot默认的内嵌容器是Tomcat，与其说SpringBoot可以处理多少
 ## 正文
 SpringBoot默认的内嵌容器是Tomcat，与其说SpringBoot可以处理多少请求，到不如说Tomcat可以处理多少请求。
 和处理请求数量有关的参数如下：
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/canshu.58wc1npie2w0.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/canshu.58wc1npie2w0.webp)
 
 - **server.tomcat.threads.min-spare**：最少的工作线程数，默认大小是10。该参数相当于长期工，如果并发请求的数量达不到10，就会依次使用这几个线程去处理请求。
 - **server.tomcat.threads.max**：最多的工作线程数，默认大小是200。参照最大线程数，这里有一点不同，tomacat7使用的是无界队列，所以不会像线程池那样等待队列满启动额外线程，这里会直接启动线程处理，等到达最大线程书后再回放队列。
@@ -41,7 +41,7 @@ server:
 ```
 开一百个线程模拟 观察一下测试结果：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/jieguo.2278vl86j9ds.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/jieguo.2278vl86j9ds.webp)
 
 从结果中可以看出，由于设置的 **max-connections+accept-count** 的和是40，所以有60个请求会被丢弃，这和我们的预期是相符的。由于最大线程是15，也就是有25个请求会先等待，等前15个处理完了再处理15个，最后在处理10个，也就是将40个请求分成了15,15,10这样三批进行处理。
 ### 结论：

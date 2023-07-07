@@ -16,11 +16,11 @@ mindmap2: false
 
 ## 总体设计
 我们首先来看一下ThreadPoolExecutor的UML类图，了解下ThreadPoolExecutor的继承关系。
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池01.dbfrgyg7u4g.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池01.dbfrgyg7u4g.webp)
 
 ThreadPoolExecutor实现的顶层接口是Executor，顶层接口Executor提供了一种思想：将任务提交和任务执行进行解耦。用户无需关注如何创建线程，如何调度线程来执行任务，用户只需提供Runnable对象，将任务的运行逻辑提交到执行器(Executor)中，由Executor框架完成线程的调配和任务的执行部分。ExecutorService接口增加了一些能力：（1）扩充执行任务的能力，补充可以为一个或一批异步任务生成Future的方法；（2）提供了管控线程池的方法，比如停止线程池的运行。AbstractExecutorService则是上层的抽象类，将执行任务的流程串联了起来，保证下层的实现只需关注一个执行任务的方法即可。最下层的实现类ThreadPoolExecutor实现最复杂的运行部分，ThreadPoolExecutor将会一方面维护自身的生命周期，另一方面同时管理线程和任务，使两者良好的结合从而执行并行任务。
 ThreadPoolExecutor是如何运行，如何同时维护线程和执行任务的呢？其运行机制如下图所示：
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池02.1vm1oo07wif4.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池02.1vm1oo07wif4.webp)
 
 图2 ThreadPoolExecutor运行流程
 
@@ -46,11 +46,11 @@ private static int ctlOf(int rs, int wc) { return rs | wc; }   //通过状态和
 ```
 ThreadPoolExecutor的运行状态有5种，分别为：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程生命周期.636mjzgiihs0.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程生命周期.636mjzgiihs0.webp)
 
 其生命周期转换如下入所示：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池03.2wag61jki8o0.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池03.2wag61jki8o0.webp)
 
 图3 线程池生命周期
 
@@ -67,7 +67,7 @@ ThreadPoolExecutor的运行状态有5种，分别为：
 
 其执行流程如下图所示：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池04.5xy2g2wov0k0.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池04.5xy2g2wov0k0.webp)
 
 图4 任务调度流程
 
@@ -76,19 +76,19 @@ ThreadPoolExecutor的运行状态有5种，分别为：
 阻塞队列(BlockingQueue)是一个支持两个附加操作的队列。这两个附加的操作是：在队列为空时，获取元素的线程会等待队列变为非空。当队列满时，存储元素的线程会等待队列可用。阻塞队列常用于生产者和消费者的场景，生产者是往队列里添加元素的线程，消费者是从队列里拿元素的线程。阻塞队列就是生产者存放元素的容器，而消费者也只从容器里拿元素。
 下图中展示了线程1往阻塞队列中添加元素，而线程2从阻塞队列中移除元素：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池05.2hl0akjwrkg0.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池05.2hl0akjwrkg0.webp)
 
 图5 阻塞队列
 
 使用不同的队列可以实现不一样的任务存取策略。在这里，我们可以再介绍下阻塞队列的成员：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/阻塞队列.2lj3av1d7fq0.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/阻塞队列.2lj3av1d7fq0.webp)
 
 ### 任务申请
 由上文的任务分配部分可知，任务的执行有两种可能：一种是任务直接由新创建的线程执行。另一种是线程从任务队列中获取任务然后执行，执行完任务的空闲线程会再次去从队列中申请任务再去执行。第一种情况仅出现在线程初始创建的时候，第二种是线程获取任务绝大多数的情况。
 线程需要从任务缓存模块中不断地取任务执行，帮助线程从阻塞队列中获取任务，实现线程管理模块和任务管理模块之间的通信。这部分策略由getTask方法实现，其执行流程如下图所示：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池06.5r3t53irxbo0.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池06.5r3t53irxbo0.webp)
 
 图6 获取任务流程图
 
@@ -105,7 +105,7 @@ public interface RejectedExecutionHandler {
 
 用户可以通过实现这个接口去定制拒绝策略，也可以选择JDK提供的四种已有拒绝策略，其特点如下：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/拒绝策略.45zomnuwjv40.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/拒绝策略.45zomnuwjv40.webp)
 
 ## Worker线程管理
 ### Worker线程
@@ -122,7 +122,7 @@ Worker这个工作线程，实现了Runnable接口，并持有一个线程thread
 如果这个值是非空的，那么线程就会在启动初期立即执行这个任务，也就对应核心线程创建时的情况；如果这个值是null，那么就需要创建一个线程去执行任务列表（workQueue）中的任务，也就是非核心线程的创建。
 Worker执行任务的模型如下图所示：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池07.4ajfh0e2obw0.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池07.4ajfh0e2obw0.webp)
 
 图7 Worker执行任务
 
@@ -131,7 +131,7 @@ Worker是通过继承AQS，使用AQS来实现独占锁这个功能。没有使�
 1.lock方法一旦获取了独占锁，表示当前线程正在执行任务中。 2.如果正在执行任务，则不应该中断线程。 3.如果该线程现在不是独占锁的状态，也就是空闲的状态，说明它没有在处理任务，这时可以对该线程进行中断。 4.线程池在执行shutdown方法或tryTerminate方法时会调用interruptIdleWorkers方法来中断空闲的线程，interruptIdleWorkers方法会使用tryLock方法来判断线程池中的线程是否是空闲状态；如果线程是空闲状态则可以安全回收。
 在线程回收过程中就使用到了这种特性，回收过程如下图所示：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池08.6lw7vjlonm80.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池08.6lw7vjlonm80.webp)
 
 图8 线程池回收过程
 
@@ -139,7 +139,7 @@ Worker是通过继承AQS，使用AQS来实现独占锁这个功能。没有使�
 增加线程是通过线程池中的addWorker方法，该方法的功能就是增加一个线程，该方法不考虑线程池是在哪个阶段增加的该线程，这个分配线程的策略是在上个步骤完成的，该步骤仅仅完成增加线程，并使它运行，最后返回是否成功这个结果。addWorker方法有两个参数：firstTask、core。firstTask参数用于指定新增的线程执行的第一个任务，该参数可以为空；core参数为true表示在新增线程时会判断当前活动线程数是否少于corePoolSize，false表示新增线程前需要判断当前活动线程数是否少于maximumPoolSize，其执行流程如下图所示：
 > 即便当前活动的线程有空闲的，只要这个活动的线程数量小于设定的核心线程数，那么依旧会启动一个新线程来执行任务。也就是说不会去复用任何线程。
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池09.5b568xn2h0w0.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池09.5b568xn2h0w0.webp)
 
 图9 申请线程执行流程图
 
@@ -156,7 +156,7 @@ try {
 ```
 线程回收的工作是在processWorkerExit方法完成的。
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池10.6wb2kc5udu80.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池10.6wb2kc5udu80.webp)
 
 图10 线程销毁流程
 
@@ -167,7 +167,7 @@ try {
 **需要注意的是，如果设置了对核心线程进行超时控制的话（此时相当于对所有线程进行超时控制），如果getTask结果为null则跳出循环，也会执行processWorkerExit()方法，销毁线程。**
 执行流程如下图所示：
 
-![](https://cdn.jsdelivr.net/gh/L1Chenxv/picx-images-hosting@master/java/线程池11.22kqi2je6lhc.webp)
+![](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/线程池11.22kqi2je6lhc.webp)
 
 图11 执行任务流程
 
