@@ -46,12 +46,6 @@ Synchronized是依赖于JVM实现的，而ReenTrantLock是JDK实现的，有什�
 
 3.ReenTrantLock提供了一种能够中断等待锁的线程的机制，通过lock.lockInterruptibly()来实现这个机制。
 
-**ReenTrantLock实现的原理：**
-
-在网上看到相关的源码分析，本来这块应该是本文的核心，但是感觉比较复杂就不一一详解了，简单来说，ReenTrantLock的实现是一种自旋锁，通过循环调用CAS操作来实现加锁。
-
-它的性能比较好也是因为避免了使线程进入内核态的阻塞状态。想尽办法避免线程进入内核的阻塞状态是我们去分析和理解锁设计的关键钥匙。
-
 **什么情况下使用ReenTrantLock：**
 
 答案是，如果你需要实现ReenTrantLock的三个独有功能时。
