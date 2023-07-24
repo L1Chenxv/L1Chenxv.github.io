@@ -39,6 +39,6 @@ CPU性能指标:
 网络性能指标:
 
 - ifconfig - 用于显示网络接口的配置信息，包括IP地址、MAC地址、网络流量统计等
-- netstat -an|grep -i tcp - 查看当前TCP网络连接情况
+- netstat -an|grep -i tcp   -  查看当前TCP网络连接情况
 - iftop - 实时监控服务器的网络带宽使用情况（需要安装）
 

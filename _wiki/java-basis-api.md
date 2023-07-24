@@ -1,7 +1,7 @@
 ---
 layout: wiki
 title: Java-api
-cate1:
+cate1: Java
 cate2:
 description: 记录日常开发中一些常用api
 keywords: keyword1, keyword2
