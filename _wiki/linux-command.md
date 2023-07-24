@@ -1,7 +1,7 @@
 ---
 layout: wiki
 title: linux如何对四大指标进行监控
-categories: [Linux]
+categories: Linux
 description: Linux系统性能的四个指标：CPU、内存、磁盘、网络
 keywords: linux
 mermaid: false
