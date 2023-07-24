@@ -1,9 +1,12 @@
 ---
 layout: wiki
-title: linux如何对四大指标进行监控
-categories: Linux
+title: Linux四大系统性能指标
+cate1: Linux
+cate2:
 description: Linux系统性能的四个指标：CPU、内存、磁盘、网络
-keywords: linux
+keywords: keyword1, keyword2
+type:
+link:
 mermaid: false
 sequence: false
 flow: false
