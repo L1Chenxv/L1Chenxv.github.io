@@ -84,7 +84,7 @@ mindmap2: false
 
 这里除了考虑数据库的范式设计，还要考虑索引的设计。示例如下：
 
-<img src="https://mmbiz.qpic.cn/sz_mmbiz_png/I8SfHxT94hW5cdAcDDgIiaDhH6qUD1VfxCrcVXADoG2Nib4a3Rhiciao0rWMXGyz20txbf2lAcaTSbSpkLJ75QMUOA/640?wx_fmt=png&amp;wxfrom=5&amp;wx_lazy=1&amp;wx_co=1" alt="图片" style="zoom:80%;" />
+<img src="https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/java/image.53rt9sz79c00.webp" alt="image" style="zoom:80%;" />
 
 ## 风险防控
 
