@@ -54,7 +54,7 @@ Write-ahead Log的思路：先在内存中提交事务，然后写⽇志（所�
 
 下图展示了Redo Log逻辑与物理结构的差异，LSN（Log Sequence Number）是逻辑上日志按照时间顺序从小到大的编号。在InnoDB中，LSN是一个64位的整数，取的是从数据库安装启动开始，到当前所写入的总的日志字节数。实际上LSN没有从0开始，而是从8192开始，这个是InnoDB源代码里面的一个常量LOG_START_LSN。因为事务有大有小，每个事务产生的日志数据量是不一样的，所以日志是变长记录，因此LSN是单调递增的，但肯定不是呈单调连续递增。
 
-<img src="https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6ig20874mc00.webp" alt="image" style="zoom:67%;" />
+<img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6ig20874mc00.webp" alt="image" style="zoom:67%;" />
 
 物理上面，一个固定的文件大小，每 512 个字节一个 Block，循环使用。显然，很容易通过LSN换算出所属的Block。反过来，给定Redo Log，也很容易算出第一条日志在什么位置。假设在Redo Log中，从头到尾所记录的LSN依次如下所示：(200,289,378,478,30,46,58,69,129)
 很显然，第1条日志是30，最后1条日志是478，30以前的已经被覆盖。
@@ -93,7 +93,7 @@ Redo Log采用了哪种记法呢？它采用了逻辑和物理的综合体，就
 
 #### Redo Log 记录内容
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6ztavlhbg240.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6ztavlhbg240.webp)
 
 其中Type就是记录的作用对象(根据REDO记录不同的作用对象，可划分为三个大类：作用于Page，作用于Space以及提供额外信息的Logic类型)，Space ID和Page Number唯一标识一个Page页，这三项是所有REDO记录都需要有的头信息。
 
@@ -137,11 +137,11 @@ commit
 
 
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.4vcchsn9co00.png)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.4vcchsn9co00.png)
 
 事务与产生的Redo Log对应关系
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.2y9xmi4mkim0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.2y9xmi4mkim0.webp)
 
 ### 6. 事务Rollback与崩溃恢复（ARIES算法）
 
@@ -159,11 +159,11 @@ commit
 
 如图所示，客户端提交了Rollback，数据库并没有更改之前的数据，而是以相反的方向生成了三个新的SQL语句，然后Commit，所以是逻辑层面上的回滚，而不是物理层面的回滚。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.4hpelkuwo6c0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.4hpelkuwo6c0.webp)
 
 同样，如果宕机时一个事务执行了一半，在重启、回滚的时候，也并不是删除之前的部分，而是以相反的操作把这个事务“补齐”，然后Commit
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.5yfhv0b6ry80.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.5yfhv0b6ry80.webp)
 
 这样一来，事务的回滚就变得简单了，不需要改之前的数据，也不需要改Redo Log。相当于没有了回滚，全部都是Commit。对于Redo Log来说，就是不断地append。这种逆向操作的SQL语句对应到Redo Log里面，叫作Compensation Log Record（CLR），会和正常操作的SQL的Log区分开。
 
@@ -171,7 +171,7 @@ commit
 
 如图6-14所示，有T0～T5共6个事务，每个事务所在的线段代表了在Redo Log中的起始和终止位置。发生宕机时，T0、T1、T2已经完成，T3、T4、T5还在进行中，所以回滚的时候，要回滚T3、T4、T5。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.j3739rof0bc.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.j3739rof0bc.webp)
 
 ARIES算法分为三个阶段：
 
@@ -201,7 +201,7 @@ Sharp Checkpoint的应用场景很狭窄，因为系统不可能停下来，所�
 
 问题（1）：求取Crash的时候，未提交事务的集合。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.j3739rof0bc.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.j3739rof0bc.webp)
 
 以图6-14为例，在最近的一次Checkpoint 2时候，未提交事务集合是{T2，T3}，此时还没有T4、T5。从此处开始，遍历Redo Log到末尾。
 在遍历的过程中，首先遇到了T2的结束标识，把T2从集合中移除，剩下{T3}；
@@ -251,7 +251,7 @@ Sharp Checkpoint的应用场景很狭窄，因为系统不可能停下来，所�
 如图6-17所示，**假设要回滚一个未提交的事务T，其有三条日志LSN分别为600、900、1000。第一次宕机重启，首先对LSN=1000进行回滚，生成对应的LSN=1200的日志，这条日志里会有一个字段叫作UndoNxtLSN，记录的是其对应的被回滚的日志的前一条日志，即UndoNxtLSN = 900。这样当再一次宕机重启时，遇到LSN=1200的CLR，首先会忽略这条日志；然后看到UndoNxtLSN = 900，会定位到LSN=900的日志，为其生成对应的CLR日志LSN=1600；然后继续回滚，LSN=1700的日志，回滚的是LSN=600。
 这样，不管出现几次宕机，重启后最终都能保证回滚日志和之前的日志一一对应，不会出现“回滚嵌套”问题。**
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.2sjr0ixi40k0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.2sjr0ixi40k0.webp)
 
 **到此为止，已经对事务的A（原子性）和D（持久性）有了一个全面的理解，接下来将讨论I的实现。在此先对Redo Log做一个总结：**
 
@@ -283,7 +283,7 @@ Sharp Checkpoint的应用场景很狭窄，因为系统不可能停下来，所�
 
 把这个展开，就是Page数据刷盘的四种策略，如表6-10所示。下面对这四种策略进行详细分析：
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.184mm4dwbck.png)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.184mm4dwbck.png)
 
 **No Steal和Steal**：指未提交的事务是否可以写入磁盘中？No Steal是未提交的事务不能写入磁盘，只能在内存中操作，等到事务提交完，再把数据一次性写入；Steal是指未提交的事务也能写入，如果事务需要回滚，再更改磁盘上的数据。
 
@@ -310,13 +310,13 @@ Sharp Checkpoint的应用场景很狭窄，因为系统不可能停下来，所�
 
 在多线程编程中，读写的并发问题有三种策略
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6g32xd3ak100.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6g32xd3ak100.webp)
 
 对比上面表格的三种并发策略可以知道，从上到下，并发度越来越高。而InnoDB用的就是CopyOnWrite思想，是在Undo Log里面实现的。每个事务修改记录之前，都会先把该记录拷贝一份出来，拷贝出来的这个备份存在Undo Log里。因为事务有唯一的编号ID，ID从小到大递增，每一次修改，就是一个版本，因此Undo Log维护了数据的从旧到新的每个版本，各个版本之间的记录通过链表串联。
 
 也正因为有了MVCC这种特性，通常的select语句都是不加锁的，读取的全部是数据的历史版本，从而支撑高并发的查询。这种读，专业术语叫作“快照读”，与之相对应的是“当前读”。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1pnov6uu1c5c.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1pnov6uu1c5c.webp)
 
 ### 3. Undo Log不是Log
 
@@ -328,13 +328,13 @@ Sharp Checkpoint的应用场景很狭窄，因为系统不可能停下来，所�
 
 对于insert记录，没有历史版本数据，因此insert的Undo Log只记录了该记录的主键ID，当事务提交之后，该Undo Log就可以删除了；
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.2xhru8f9kvc0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.2xhru8f9kvc0.webp)
 
 > 这种Undo Record在代码中对应的是TRX_UNDO_INSERT_REC类型。不同于Update类型的Undo Record，Insert Undo Record仅仅是为了可能的事务回滚准备的，并不在MVCC功能中承担作用。因此只需要记录对应Record的Key，供回滚时查找Record位置即可。
 
 对于update/delete记录，因为MVCC的存在，其历史版本数据可能还被当前未提交的其他事务所引用，一旦未提交的事务提交了，其对应的Undo Log也就可以删除了。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.46jo7frp88g0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.46jo7frp88g0.webp)
 
 > 除了跟Insert Undo Record相同的头尾信息，以及主键Key Fileds之外，Update Undo Record增加了：
 >
@@ -350,7 +350,7 @@ Sharp Checkpoint的应用场景很狭窄，因为系统不可能停下来，所�
 
 这些历史版本什么时候可以删除呢？在T1、T2提交之后，历史版本3就可以删除了；在T3提交之后，历史版本2就可以删除了，依此类推。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1vvaw0tvfpwg.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1vvaw0tvfpwg.webp)
 
 ### 4. Undo Log与Redo Log的关联
 
