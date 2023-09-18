@@ -135,6 +135,8 @@ commit
 
 下图展示了两个逻辑事务，其对应的Redo Log在磁盘上的排列示意图。可以看到，LSN是单调递增的，但是两个事务对应的日志是交叉排列的。
 
+
+
 ![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.4vcchsn9co00.png)
 
 事务与产生的Redo Log对应关系
