@@ -28,9 +28,14 @@ topmost: false
 - ＜
 
 类型转换，以 **≥X**为base
+
  **＞X **=> **≥ X + 1**
+
 **<X **=> **(≥X) - 1**
+
 **≤X **=> **(＞X) - 1**
+
+
 
 ### 模板方法
 // lowerBound 返回最小的满足 nums[i] >= target 的 i
