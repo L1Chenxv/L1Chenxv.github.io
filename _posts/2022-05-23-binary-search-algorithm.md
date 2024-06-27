@@ -39,8 +39,11 @@ topmost: false
 
 ### 模板方法
 // lowerBound 返回最小的满足 nums[i] >= target 的 i
+
 // 如果数组为空，或者所有数都 < target，则返回 nums.length
+
 // 要求 nums 是非递减的，即 nums[i] <= nums[i + 1]
+
 target：**理解循环不变量，初始化边界，边界缩小写法**
 
 #### 闭区间写法
