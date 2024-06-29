@@ -2,7 +2,7 @@
 layout: post
 title: java8注解@Repeatable使用技巧
 categories: [Java]
-description: @Repeatable
+description: 注解@Repeatable使用技巧
 keywords: java
 mermaid: false
 sequence: false
