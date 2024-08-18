@@ -178,7 +178,11 @@ springboot中EnableAutoConfiguration的自动装配
 
 ​	（1）我们知道这种方式是spring在启动的时候来扫描该类上有@Component的时候，才会把它变成bean对象，又因为是在SDK(第三方jar包)，因此需要在spring.factories中EnableAutoConfiguration加上该配置类路径，使其可以被spring扫描到 
 
-​	（2）所以存在一个问题，如果配置项很多了，岂不是你这个spring.factories中EnableAutoConfiguration加上该类的路径巨多，维护也不方便呀，如下：
+​	（2）所以存在一个问题，如果配置项很多了，岂不是你这个spring.factories中EnableAutoConfiguration加上该类的路径巨多，维护也不方便呀，如果在**提供方的SDK**中存在一些配置项需要配置，如下：
+
+<img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/java/image.6t71lwxpf5.webp" alt="image" style="zoom:50%;" />
+
+<img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/java/image.2rv27iu0c6.webp" alt="image" style="zoom:50%;" />
 
 <img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/java/image.3k7xp8ujx7.webp" alt="image" style="zoom:50%;" />
 
