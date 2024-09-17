@@ -22,7 +22,7 @@ mindmap2: false
 
 - @EnableConfigurationProperties
 
-@EnableConfigurationProperties的作用：则是将让使用了 @ConfigurationProperties 注解的配置类生效,将该类注入到 IOC 容器中,交由 IOC 容器进行管理，此时则不用再配置类上加上@Component。
+@EnableConfigurationProperties的作用：则是将让使用了 @ConfigurationProperties 注解的配置类生效,将该类注入到 IOC 容器中,交由 IOC 容器进行管理，此时则不用在配置类上加上@Component。
 
 
 
@@ -72,7 +72,7 @@ public class Test implements ApplicationRunner {
 
 ![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/java/image.6m3tqge8mn.webp)
 
-在测试代码上加上@EnableConfigurationProperties，参数指定那个配置类，该配置类上必须得有@ConfigurationProperties注解
+在测试代码上加上@EnableConfigurationProperties，参数指定**哪个配置类**，该配置类上**必须**得有@ConfigurationProperties注解
 
 
 
@@ -100,10 +100,10 @@ public class demo implements ApplicationRunner {
 
 springboot中EnableAutoConfiguration的自动装配
 
-#### 先说结论
-
 - EnableAutoConfiguration自动装配的作用：即把指定的类构造成对象，并放入spring容器中，使其成为bean对象，作用类似@Bean注解。
 - springboot启动的时候，会扫描该项目下所有spring.factories文件。
+
+> 上述所述造成spring.factories文件配置臃肿，是引入@EnableConfigurationProperties的原因
 
 ### 举例解释
 
@@ -145,12 +145,11 @@ springboot中EnableAutoConfiguration的自动装配
 
 1. 有的人会说：这不简单，在启动类上加上：@ComponentScan("com.example”) 就好了。
 
-2. 确实这样子就可以使用SDK中的bean对象了，但是你想想看，这个SDK刚刚好是com.example开头，与本测试项目前缀有重复的，倘若有其他SDK，如zki.example、abc.demo、king.shuai.demo…等等，此时你的@ComponentScan要怎么写呢？
+2. 确实这样子就可以使用SDK中的bean对象了，但是你想想看，这个SDK刚刚好是com.example开头，与**本测试项目前缀有重复的**，倘若有其他SDK，如zki.example、abc.demo、king.shuai.demo…等等，此时你的@ComponentScan要怎么写呢？
 
-3. 再说了，什么是SDK？是组件，是为了更加方便开发才存在的，你提供的SDK，还要别人指定要扫描你的包路径，这岂不是很失败？
+3. 再说了，什么是SDK？是组件，是为了更加方便开发才存在的，<u>**你提供的SDK，还要别人指定要扫描你的包路径，这岂不是很失败**</u>？
 
-   解决：使用EnableAutoConfiguration自动装配
-   
+   ==解决：使用EnableAutoConfiguration自动装配==
 
 **5、修改SDK，添加配置文件spring.factories**
 
@@ -168,17 +167,17 @@ springboot中EnableAutoConfiguration的自动装配
 
 <img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/java/image.70a9hc173j.webp" alt="image" style="zoom:50%;" />
 
-### 小结
+
 
 1、上述内容主要是在说：提供SDK的时候，为了方便别人可以使用本SDK的bean对象，需要在其resource/META-INF目录下创建spring.factories文件，使用EnableAutoConfiguration 把需要变成bean对象的类变成bean对象。 
 
-2、这样子其他项目再引用该SDK的时候，不用在启动类中编写需要扫描的路 
+2、这样子其他项目再引用该SDK的时候，不用在启动类中编写需要扫描的路径 
 
-3、其实配置类可以使用@ConfigurationProperties+@Component：但是因为如下的原因： 
+> 其实配置类可以使用@ConfigurationProperties+@Component：但是因为如下的原因，不被建议： 
 
 ​	（1）我们知道这种方式是spring在启动的时候来扫描该类上有@Component的时候，才会把它变成bean对象，又因为是在SDK(第三方jar包)，因此需要在spring.factories中EnableAutoConfiguration加上该配置类路径，使其可以被spring扫描到 
 
-​	（2）所以存在一个问题，如果配置项很多了，岂不是你这个spring.factories中EnableAutoConfiguration加上该类的路径巨多，维护也不方便呀，如果在**提供方的SDK**中存在一些配置项需要配置，如下：
+​	（2）所以存在一个问题，如果配置项很多了，岂不是你这个spring.factories中EnableAutoConfiguration加上该类的**路径巨多，维护也不方便**，如果在**提供方的SDK**中存在一些配置项需要配置，如下：
 
 <img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/java/image.6t71lwxpf5.webp" alt="image" style="zoom:50%;" />
 
@@ -186,7 +185,7 @@ springboot中EnableAutoConfiguration的自动装配
 
 <img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/java/image.3k7xp8ujx7.webp" alt="image" style="zoom:50%;" />
 
-因此，该配置类我们可以使用@EnableConfigurationProperties呀，在需要使用该配置类的上面加上这个注解，会自动把该@EnableConfigurationProperties注解指定的类对象，创建bean对象，这样子就无法在写到 spring.factories上面了：
+因此，该配置类我们可以使用@EnableConfigurationProperties呀，在需要使用该配置类的上面加上这个注解，会自动把该@EnableConfigurationProperties注解指定的类对象，创建bean对象，这样子就**不用再写到 spring.factories上面**了：
 
 <img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/java/image.45lx5lj3b.webp" alt="image" style="zoom:50%;" />
 
