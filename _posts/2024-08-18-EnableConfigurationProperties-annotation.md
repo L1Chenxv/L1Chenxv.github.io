@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 如何利用Spring优雅注入依赖值
+title: @EnableConfigurationProperties注解使用方式与作用
 categories: [Java]
 description: EnableConfigurationProperties注解使用方式与作用
 keywords: java
@@ -11,8 +11,6 @@ mathjax: false
 mindmap: false
 mindmap2: false
 ---
-
-
 
 ## 两者的对比
 
