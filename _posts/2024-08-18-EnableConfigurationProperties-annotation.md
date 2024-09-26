@@ -1,6 +1,6 @@
 ---
 layout: post
-title: @EnableConfigurationProperties使用方式与作用
+title: 注解@EnableConfigurationProperties使用方式与作用
 categories: [Java]
 description: @EnableConfigurationProperties使用方式与作用
 keywords: java
