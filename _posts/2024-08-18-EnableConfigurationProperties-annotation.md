@@ -2,7 +2,7 @@
 layout: post
 title: 如何利用Spring优雅注入依赖值
 categories: [Java]
-description: @EnableConfigurationProperties使用方式与作用
+description: 如何利用Spring优雅注入依赖值
 keywords: java
 mermaid: false
 sequence: false
