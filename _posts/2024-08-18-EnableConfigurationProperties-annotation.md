@@ -1,8 +1,8 @@
 ---
 layout: post
-title: java81注解@Repeatable使用技巧
+title: @EnableConfigurationProperties使用方式与作用
 categories: [Java]
-description: 注解@Repeatable使用技巧
+description: @EnableConfigurationProperties使用方式与作用
 keywords: java
 mermaid: false
 sequence: false
