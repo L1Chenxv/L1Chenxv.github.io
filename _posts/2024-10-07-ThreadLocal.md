@@ -1,7 +1,7 @@
 ---
 layout: post
 title: ThreadLocal 演变之路
-categories: [Java]
+categories: [java]
 description: ThreadLocal 演变之路
 mermaid: false
 sequence: false
@@ -36,7 +36,7 @@ mindmap2: false
 
 通过实例代码来简单演示下ThreadLocal的使用。
 
-```Java
+```java
 public class ThreadLocalExample {
 
     private static ThreadLocal<Integer> threadLocal = new ThreadLocal<>();
@@ -91,7 +91,7 @@ pool-1-thread-1 get 1
 
 Thread 类中有一个 threadLocals 成员变量（实际上还有一个inheritableThreadLocals，后面讲），它的类型是ThreadLocal 的内部静态类ThreadLocalMap
 
-```Java
+```java
 public class Thread implements Runnable {
   
           // ...... 省略
@@ -107,7 +107,7 @@ ThreadLocalMap 是一个定制化的Hashmap，为什么是个HashMap？很好理
 
 ThreadLocalMap 初始化时会创建一个大小为16的Entry 数组，Entry 对象也是用来保存 key- value 键值对（这个Key固定是ThreadLocal 类型）。值得注意的是，这个Entry 继承了 `WeakReference`
 
-```Java
+```java
         static class Entry extends WeakReference<ThreadLocal<?>> {
        /** The value associated with this ThreadLocal. */
             Object value;
@@ -123,7 +123,7 @@ ThreadLocalMap 初始化时会创建一个大小为16的Entry 数组，Entry 对
 
 #### void set(T value)
 
-```Java
+```java
 public void set(T value) {
     // ① 获取当前线程
     Thread t = Thread.currentThread();
@@ -144,7 +144,7 @@ ThreadLocalMap getMap(Thread t) {
 
 #### T get()
 
-```Java
+```java
 public T get() {
     // ① 获取当前线程
     Thread t = Thread.currentThread();
@@ -185,7 +185,7 @@ protected T initialValue() {
 
 如果当前线程的threadLocals变量不为空，则删除当前线程中指定ThreadLocal实例对应的本地变量。
 
-```Java
+```java
 public void remove() {
      ThreadLocalMap m = getMap(Thread.currentThread());
      if (m != null)
@@ -213,7 +213,7 @@ ThreadLocal 的主要问题是会产生**脏数据**和**内存****泄露**。
 
 这里提供一个demo供你理解：
 
-```Java
+```java
 public class ThreadLocalDirtyDataDemo {
 
     private static ThreadLocal<String> threadLocal = new ThreadLocal<>();
@@ -260,7 +260,7 @@ Thread-1 线程 是 Thread-0
 
 回顾一下前文，ThreadLocalMap 内部存储使用Entry 数组保存 key- value 键值对（这个Key固定是ThreadLocal 类型）。值得注意的是，这个Entry 继承了 `WeakReference`。
 
-```Java
+```java
 static class Entry extends WeakReference<ThreadLocal<?>> {
       /** The value associated with this ThreadLocal. */
       Object value;
@@ -312,7 +312,7 @@ ThreadLocal已经能满足大部分场景的使用了，但在遇到线程间传
 
 InheritableThreadLocal的使用方式和ThreadLocal别无二致，提供一个demo供你理解：
 
-```Java
+```java
 public class InheritableThreadLocalDemo {
 
     private static ThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
@@ -344,7 +344,7 @@ main: hello world
 
 我们要探究的是如何将value传给子线程的，接下来通过源码给你答案：
 
-```Java
+```java
 public class InheritableThreadLocal<T> extends ThreadLocal<T> {
 
     // ①
@@ -381,7 +381,7 @@ InheritableThreadLocal 继承了ThreadLocal，并且重写了三个方法，看�
 
 这要从创建Thread的代码说起，打开Thread类的默认构造函数，代码如下。
 
-```Java
+```java
 public Thread(Runnable target) {
     init(null, target, "Thread-" + nextThreadNum(), 0);
 }
@@ -410,7 +410,7 @@ static ThreadLocalMap createInheritedMap(ThreadLocalMap parentMap) {
 
 再来看看里面是如何执行createInheritedMap 的。
 
-```Java
+```java
 private ThreadLocalMap(ThreadLocalMap parentMap) {
     Entry[] parentTable = parentMap.table;
     int len = parentTable.length;
@@ -449,7 +449,7 @@ ThreadLocal 实现线程内部变量共享，InheritableThreadLocal 实现了父
 
 因为线程池中的线程是复用的，并没有重新初始化线程，InheritableThreadLocal之所以起作用是因为在Thread类中最终会调用init()方法去把InheritableThreadLocal的map复制到子线程中。由于线程池复用了已有线程，所以没有调用init()方法这个过程，也就不能将父线程中的InheritableThreadLocal值传给子线程。
 
-```Java
+```java
 public class ThreadDemo implements Runnable {
     private static InheritableThreadLocal<String> inheritableThreadLocal = new InheritableThreadLocal<>();
     private static ExecutorService executorService = Executors.newFixedThreadPool(1);
@@ -492,7 +492,7 @@ public class ThreadDemo implements Runnable {
 
 针对上述情况，阿里开源了一个`TTL库`，即Transmittable ThreadLocal来解决这个问题，接下来通过一个示例演示`TransmittableThreadLocal`是否能够在线程池中实现上下文的传递，并且满足任务间上下文的隔离效果：
 
-```Java
+```java
 public class ThreadDemo implements Runnable {
 
     public static ExecutorService executorService = Executors.newFixedThreadPool(1);
@@ -541,13 +541,13 @@ public class ThreadDemo implements Runnable {
 
 你想到的这些问题，TTL已经替你实现了，你只需要传入一个线程池，就能享受丝滑的切换：
 
-```Java
+```java
 TtlExecutors.getTtlExecutor(Executors.newFixedThreadPool(1));
 ```
 
 思考一下，既然任务是通过包装的方式实现，那线程池是否也是这一类型呢？深入源码解析一下：
 
-```Java
+```java
 @Nullable
 public static Executor getTtlExecutor(@Nullable Executor executor) {
     if (TtlAgent.isTtlAgentLoaded() || null == executor || executor instanceof TtlEnhanced) {
@@ -572,7 +572,7 @@ public void execute(@NonNull Runnable command) {
 
 从定义上看，`TransimittableThreadLocal`继承于`InheritableThreadLocal`，并实现`TtlCopier`接口，它里面只有一个`copy`方法。所以主要是对`InheritableThreadLocal`的扩展。
 
-```Java
+```java
 public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> implements TtlCopier<T> 
 ```
 
@@ -585,7 +585,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
 
 重写了`childValue`方法，实现上直接将父线程的属性作为子线程的本地变量对象。
 
-```Java
+```java
 private static final InheritableThreadLocal<WeakHashMap<TransmittableThreadLocal<Object>, ?>> holder =
         new InheritableThreadLocal<WeakHashMap<TransmittableThreadLocal<Object>, ?>>() {
             @Override
@@ -602,7 +602,7 @@ private static final InheritableThreadLocal<WeakHashMap<TransmittableThreadLocal
 
 父线程在每次进行`get,set,remove`操作时都会对`holder`进行操作
 
-```Java
+```java
 public final T get() {
     T value = super.get();
     if (disableIgnoreNullValueSemantics || null != value) addThisToHolder();
@@ -627,7 +627,7 @@ public final void remove() {
 
 添加和删除逻辑也比较简单，但需要注意的是holder存储的key是父线程TransmittableThreadLocal的引用，value则为空值
 
-```Java
+```java
 private void addThisToHolder() {
     if (!holder.get().containsKey(this)) {
         holder.get().put((TransmittableThreadLocal<Object>) this, null); // WeakHashMap supports null value.
@@ -650,7 +650,7 @@ private void removeThisFromHolder() {
 
 无论是通过包装任务还是包装线程池的方式，底层都会通过`TtlRunnable.get(runnable)`进行增强调用，会调用到TtlRunnable的构造方法，然后调用到`capture()`拷贝方法
 
-```Java
+```java
 public final class TtlRunnable implements Runnable, TtlWrapper<Runnable>, TtlEnhanced, TtlAttachments {
     private TtlRunnable(@NonNull Runnable runnable, boolean releaseTtlValueReferenceAfterRun) {
         // capturedRef：拷贝副本的引用
@@ -697,7 +697,7 @@ private static WeakHashMap<ThreadLocal<Object>, Object> captureThreadLocalValues
 
 ### 如何维护
 
-```Java
+```java
 @Override
 public void run() {
     /**
