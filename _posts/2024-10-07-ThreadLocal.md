@@ -20,7 +20,7 @@ mindmap2: false
 - **ThreadLocal 使用 和 实现原理**
 - **ThreadLocal 副作用**
   - **脏数据**
-  - **内存泄漏的分析**
+  - **内存****泄漏的分析**
 - **InheritableThreadLocal  使用 和 实现原理**
   - **InheritableThreadLocal 副作用**
   - **父子线程传递烦恼**
@@ -32,9 +32,9 @@ mindmap2: false
 
 ## 使用
 
-**ThreadLocal 适用于每个线程需要自己独立的实例且该实例需要在多个方法中被使用，即变量在线程间隔离而在方法或类间共享的场景。** 确切的来说，ThreadLocal 并不是专门为了解决多线程共享变量产生的并发问题而出来的，而是给提供了一个新的思路，曲线救国。
+**ThreadLocal 适用于每个线程需要自己独立的实例且该实例需要在多个方法中被使用，即变量在线程间隔离而在方法或类间共享的场景。** 确切的来说，`ThreadLocal`并不是专门为了解决多线程共享变量产生的并发问题而出来的，而是给提供了一个新的思路，曲线救国。
 
-通过实例代码来简单演示下ThreadLocal的使用。
+通过实例代码来简单演示下`ThreadLocal`的使用。
 
 ```java
 public class ThreadLocalExample {
@@ -76,7 +76,7 @@ pool-1-thread-1 get 1
 */
 ```
 
-可以看到，线程1不会受到线程2的影响，因为ThreadLocal 创建的是线程私有的变量。
+可以看到，线程1不会受到线程2的影响，因为`ThreadLocal`创建的是线程私有的变量。
 
 ## 原理
 
@@ -89,34 +89,34 @@ pool-1-thread-1 get 1
 - ThreadLocalMap
 - ThreadLocalMap.Entry
 
-Thread 类中有一个 threadLocals 成员变量（实际上还有一个inheritableThreadLocals，后面讲），它的类型是ThreadLocal 的内部静态类ThreadLocalMap
+Thread 类中有一个 `threadLocals`成员变量（实际上还有一个`inheritableThreadLocals`，后面讲），它的类型是`ThreadLocal`的内部静态类`ThreadLocalMap`
 
 ```java
 public class Thread implements Runnable {
   
-          // ...... 省略
-          
-        /* ThreadLocal values pertaining to this thread. This map is maintained
-     * by the ThreadLocal class. */
-    ThreadLocal.ThreadLocalMap threadLocals = null;
+      // ...... 省略
+
+    /* ThreadLocal values pertaining to this thread. This map is maintained
+ 	* by the ThreadLocal class. */
+	ThreadLocal.ThreadLocalMap threadLocals = null;
 
 }
 ```
 
-ThreadLocalMap 是一个定制化的Hashmap，为什么是个HashMap？很好理解，每个线程可以关联多个ThreadLocal变量。
+`ThreadLocalMap`是一个定制化的`Hashmap`，为什么是个HashMap？很好理解，每个线程可以关联多个ThreadLocal变量。
 
-ThreadLocalMap 初始化时会创建一个大小为16的Entry 数组，Entry 对象也是用来保存 key- value 键值对（这个Key固定是ThreadLocal 类型）。值得注意的是，这个Entry 继承了 `WeakReference`
+`ThreadLocalMap` 初始化时会创建一个大小为16的Entry数组，Entry对象也是用来保存 key- value 键值对（这个Key固定是`ThreadLocal`类型）。值得注意的是，这个Entry继承了 `WeakReference`
 
 ```java
-        static class Entry extends WeakReference<ThreadLocal<?>> {
-       /** The value associated with this ThreadLocal. */
-            Object value;
+static class Entry extends WeakReference<ThreadLocal<?>> {
+/** The value associated with this ThreadLocal. */
+    Object value;
 
-            Entry(ThreadLocal<?> k, Object v) {
-                super(k);
-                value = v;
-            }
-        }
+    Entry(ThreadLocal<?> k, Object v) {
+        super(k);
+        value = v;
+    }
+}
 ```
 
 ### ThreadLocal的set、get及remove方法的源码
@@ -132,7 +132,7 @@ public void set(T value) {
     if (map != null)
         map.set(this, value);
     else
-                    // ③ 第一次调用就创建当前线程的对应的ThreadLocalMap
+         // ③ 第一次调用就创建当前线程的对应的ThreadLocalMap
         // 并且会将值保存进去，key是当前的threadLocal，value就是传进来的值
         createMap(t, value);
 }
@@ -183,7 +183,7 @@ protected T initialValue() {
 
 #### void remove()
 
-如果当前线程的threadLocals变量不为空，则删除当前线程中指定ThreadLocal实例对应的本地变量。
+如果当前线程的`threadLocals`变量不为空，则删除当前线程中指定`ThreadLocal`实例对应的本地变量。
 
 ```java
 public void remove() {
@@ -193,23 +193,23 @@ public void remove() {
  }
 ```
 
-从源码中可以看出来，**自始至终，这些本地变量不是存放在ThreadLocal实例里面，而是存放在调用线程的threadLocals变量，那个线程私有的threadLocalMap 里面**。
+**从源码中可以看出来，自始至终，这些本地变量不是存放在ThreadLocal实例里面，而是存放在调用线程的threadLocals变量，那个线程私有的`threadLocalMap`里面。**
 
-ThreadLocal就是一个工具壳和一个key，它通过set方法把value值放入调用线程的threadLocals里面并存放起来，当调用线程调用它的get方法时，再从当前线程的threadLocals变量里面将其拿出来使用。
+`ThreadLocal`就是一个工具壳和一个key，它通过set方法把value值放入调用线程的`threadLocals`里面并存放起来，当调用线程调用它的get方法时，再从当前线程的`threadLocals`变量里面将其拿出来使用。
 
-ThreadLocal实现原理比较简单，但真正的难点和重点是正确认识ThreadLocal的副作用
+`ThreadLocal`实现原理比较简单，但真正的难点和重点是正确认识`ThreadLocal`的副作用
 
 ## ThreadLocal 副作用
 
-ThreadLocal 的主要问题是会产生**脏数据**和**内存****泄露**。
+ThreadLocal 的主要问题是会产生**脏数据**和**内存泄露**。
 
-先说一个结论，这两个问题通常是在线程池的线程中使用 ThreadLocal 引发的，因为线程池有**线程复用**和**内存****常驻**两个特点。
+先说一个结论，这两个问题通常是在线程池的线程中使用 ThreadLocal 引发的，因为线程池有**线程复用**和**内存常驻**两个特点。
 
 ### 脏数据
 
-大多数业务异步实现都是通过线程池作为载体实现。由于
+大多数业务异步实现都是通过线程池作为载体实现。由于线程池会重用 Thread 对象 ，那么与 Thread 绑定的类的静态属性 ThreadLocal 变量也会被重用。
 
-线程池会重用 Thread 对象 ，那么与 Thread 绑定的类的静态属性 ThreadLocal 变量也会被重用。如果在实现的线程 run() 方法体中不显式地调用 remove() 清理与线程相关的 ThreadLocal 信息，那么倘若下一个线程不调用 set() 设置初始值，就可能 get() 到复用的线程信息，包括 ThreadLocal 所关联的线程对象的 value 值。
+如果在实现的线程 `run()` 方法体中不显式地调用 `remove()` 清理与线程相关的 ThreadLocal 信息，那么倘若下一个线程不调用 `set()` 设置初始值，就可能 `get()` 到复用的线程信息，包括 ThreadLocal 所关联的线程对象的 value 值。
 
 这里提供一个demo供你理解：
 
@@ -258,7 +258,7 @@ Thread-1 线程 是 Thread-0
 
 ### 内存泄漏
 
-回顾一下前文，ThreadLocalMap 内部存储使用Entry 数组保存 key- value 键值对（这个Key固定是ThreadLocal 类型）。值得注意的是，这个Entry 继承了 `WeakReference`。
+回顾一下前文，`ThreadLocalMap`内部存储使用`Entry`数组保存 key- value 键值对（这个Key固定是`ThreadLocal`类型）。值得注意的是，这个Entry 继承了 `WeakReference`。
 
 ```java
 static class Entry extends WeakReference<ThreadLocal<?>> {
@@ -272,45 +272,53 @@ static class Entry extends WeakReference<ThreadLocal<?>> {
   }
 ```
 
-ThreadLocalMap 的每个 Entry 都是一个对**键**的弱引用 - `WeakReference<ThreadLocal<?>>`，这一点从`super(k)`可看出。另外，每个 Entry都包含了一个对 **值** 的强引用。
+`ThreadLocalMap`的每个 Entry 都是一个对**键**的弱引用 - `WeakReference<ThreadLocal<?>>`，这一点从`super(k)`可看出。另外，每个 Entry都包含了一个对 **值** 的强引用。
 
-回顾一下JVM，当 JVM 进行垃圾回收时，**无论****内存****是否充足，都会回收只被弱引用关联的对象。**
+回顾一下JVM，当 JVM 进行垃圾回收时，**无论内存是否充足，都会回收只被弱引用关联的对象。**
 
-通过这种设计，**即使线程正在执行中， 只要 ThreadLocal 对象引用被置成 null，Entry 的 Key 就会自动在下一次** **YGC** **时被垃圾回收（因为只剩下ThreadLocalMap 对其的弱引用，没有强引用了）**。
+通过这种设计，**即使线程正在执行中， 只要 ThreadLocal 对象引用被置成 null，Entry 的 Key 就会自动在下一次** **YGC** **时被垃圾回收（因为只剩下`ThreadLocalMap`对其的弱引用，没有强引用了）**。
 
-> 如果这里Entry 的key 值是对 ThreadLocal 对象的强引用的话，那么**即使ThreadLocal的对象引用被声明成null 时，这些 ThreadLocal 不能被回收，因为还有来自 ThreadLocalMap 的强引用，这样子就会造成****内存****泄漏**。
+> 如果这里Entry 的key 值是对 ThreadLocal 对象的强引用的话，那么**即使`ThreadLocal`的对象引用被声明成null 时，这些 `ThreadLocal `不能被回收，因为还有来自** **`ThreadLocalMap `**的强引用，这样子就会造成**内存泄漏**。
 
-这类key被回收（ `key == null`）的Entry 在 ThreadLocalMap 源码中被称为 **stale entry** （翻译过来就是 **“过时的条目”**），**会在下一次执行 ThreadLocalMap 的 getEntry 和 set 方法中，将 这些 stale entry 的value 置为 null，使得原来value 指向的变量可以被垃圾回收**。
+这类key被回收（ `key == null`）的Entry 在 `ThreadLocalMap`源码中被称为 **stale entry** （翻译过来就是 **“过时的条目”**），**会在下一次执行** **`ThreadLocalMap`** **的 getEntry 和 set 方法中，将 这些 stale entry 的value 置为 null，使得原来value 指向的变量可以被垃圾回收**。
 
-这样子来看，ThreadLocalMap 是通过这种设计，**解决了 ThreadLocal 对象可能会存在的****内存****泄漏的问题**，**并且对应的value 也会因为上述的 stale entry 机制被垃圾回收**。
+这样子来看，`ThreadLocalMap`是通过这种设计，**解决了** **`ThreadLocal`****对象可能会存在的****内存****泄漏的问题**，**并且对应的value 也会因为上述的 stale entry 机制被垃圾回收**。
 
 读到这里看起来不会出现内存泄漏问题啊，线程销毁之后一切都归于虚无了，怎么还会说使用ThreadLocal 可能存在内存泄露问题呢？
 
-⚠️注意，
+⚠️注意
 
-上述机制的前提是ThreadLocal 的引用被置为null，才会触发弱引用机制，继而回收Entry 的 Value对象实例。我们来看下ThreadLocal 源码中的注释
+上述机制的前提是`ThreadLocal`的引用被置为null，才会触发弱引用机制，继而回收Entry 的`Value`对象实例。我们来看下ThreadLocal 源码中的注释
 
 > instances are typically private static fields in classes
 >
-> ThreadLocal 对象通常作为私有静态变量使用
+> ThreadLocal 对象通常作为**私有静态变量**使用
 >
 > -- 如果说一个 ThreadLocal 是非静态的，属于某个线程实例类，那就失去了线程内共享的本质属性。
 
-作为静态变量使用的话， 那么其生命周期至少不会随着线程结束而结束。也就是说，绝大多数的静态threadLocal对象都不会被置为null。这样子的话，通过 stale entry 这种机制来清除Value 对象实例这条路是走不通的。必须要手动remove() 才能保证。
+作为静态变量使用的话， 那么其生命周期至少不会随着线程结束而结束。也就是说，绝大多数的静态threadLocal对象都不会被置为null。这样子的话，通过 stale entry 这种机制来清除`Value`对象实例这条路是走不通的。必须要手动remove() 才能保证。
+
+> 这里需要强调，我们讨论的`ThreadLocal`内存泄露指的是：
+>
+> `ThreadLocal`被回收了，`ThreadLocalMap `Entry的key没有了指向。
+>
+> 上文提到了`绝大多数的`**`静态`**`threadLocal对象都不会被置为null`，那ThreadLocalMap Entry key的指向**就不会在GC时断开被回收**，也没有内存泄露一说法
+>
+> 那存在长期性内存泄露需要满足条件：**ThreadLocal被回收&&线程被复用&&线程复用后不再调用ThreadLocal的set/get/remove方法**
 
 此外，也是只有在线程复用状态下会出现这个问题。因为这些本地变量都是存储在线程的内部变量中的，当线程销毁时，threadLocalMap的对象引用会被置为null，value实例对象随着线程的销毁，在内存中成为了不可达对象，然后被垃圾回收。
 
-总结一下，上述两种ThreadLocal的副作用都是在线程复用前提下因为没有手动remove()造成的。解决副作用的方法很简单，就是每次用完ThreadLocal，都要及时调用 remove() 方法去清理。
+总结一下，上述两种`ThreadLocal`的副作用都是在线程复用前提下因为没有手动remove()造成的。解决副作用的方法很简单，就是每次用完`ThreadLocal`，都要及时调用 remove() 方法去清理。
 
 # InheritableThreadLocal
 
-ThreadLocal已经能满足大部分场景的使用了，但在遇到线程间传递私有变量场景下，比如用一个统一的ID来追踪记录调用链路。但是ThreadLocal 是不支持继承性的，同一个ThreadLocal变量在父线程中被设置值后，在子线程中是获取不到对应的对象的。
+`ThreadLocal`已经能满足大部分场景的使用了，但在遇到线程间传递私有变量场景下，比如用一个统一的ID来追踪记录调用链路。但是ThreadLocal 是不支持继承性的，同一个`ThreadLocal`变量在父线程中被设置值后，在子线程中是获取不到对应的对象的。
 
-为了解决这个问题，InheritableThreadLocal 也就应运而生。
+为了解决这个问题，`InheritableThreadLocal`也就应运而生。
 
 ## 使用
 
-InheritableThreadLocal的使用方式和ThreadLocal别无二致，提供一个demo供你理解：
+`InheritableThreadLocal`的使用方式和`ThreadLocal`别无二致，提供一个demo供你理解：
 
 ```java
 public class InheritableThreadLocalDemo {
@@ -371,11 +379,11 @@ public class Thread implements Runnable {
     ThreadLocal.ThreadLocalMap inheritableThreadLocals = null;
 ```
 
-InheritableThreadLocal 继承了ThreadLocal，并且重写了三个方法，看来实现的门道就在这三个方法里面。
+`InheritableThreadLocal`继承了`ThreadLocal`，并且重写了三个方法，这三个方法就是关键。
 
-先看代码③，InheritableThreadLocal 重写了createMap方法，那么现在当第一次调用set方法时，创建的是当前线程的inheritableThreadLocals 变量的实例而不再是threadLocals。由代码②可知，当调用get方法获取当前线程内部的map变量时，获取的是inheritableThreadLocals而不再是threadLocals。
+先看代码③，`InheritableThreadLocal `重写了`createMap`方法，那么现在当第一次调用set方法时，创建的是当前线程的`inheritableThreadLocals `变量的实例而不再是`threadLocals`。由代码②可知，当调用get方法获取当前线程内部的map变量时，获取的是`inheritableThreadLocals`而不再是`threadLocals`。
 
-可以这么说，在InheritableThreadLocal的世界里，变量inheritableThreadLocals替代了threadLocals。
+可以这么说，在`InheritableThreadLocal`的世界里，变量`inheritableThreadLocals`替代了`threadLocals`。
 
 代码②③都讲了，再来看看代码①，以及如何让子线程可以访问父线程的本地变量。
 
@@ -408,7 +416,7 @@ static ThreadLocalMap createInheritedMap(ThreadLocalMap parentMap) {
 }
 ```
 
-再来看看里面是如何执行createInheritedMap 的。
+再来看看里面是如何执行`createInheritedMap `的。
 
 ```java
 private ThreadLocalMap(ThreadLocalMap parentMap) {
@@ -437,17 +445,17 @@ private ThreadLocalMap(ThreadLocalMap parentMap) {
 }
 ```
 
-可以看到**在构造函数中**，遍历了父线程的inheritableThreadLocals，然后遍历父线程inheritableThreadLocals的Entry数组，重新封装成Entry，并且计算数组下标放入到子线程的inheritableThreadLocals中。这也就把数据从父线程传递给了子线程。
+可以看到**在构造函数中**，遍历了父线程的`inheritableThreadLocals`，然后遍历父线程`inheritableThreadLocals`的Entry数组，重新封装成Entry，并且计算数组下标放入到子线程的`inheritableThreadLocals`中。这也就把数据从父线程传递给了子线程。
 
-**也就是说使用InheritableThreadLocal只能在创建线程时同步父级线程中的值，后面父级线中的值修改是不会同步到****子线程****的。**这是重点，后面要考。
+**也就是说使用InheritableThreadLocal只能在创建线程时同步父级线程中的值，后面父级线中的值修改是不会同步到子线程的。**这是重点，后面要考。
 
 ## 副作用
 
 ### 脏数据
 
-ThreadLocal 实现线程内部变量共享，InheritableThreadLocal 实现了父线程与子线程的变量继承。但是还有一种场景，InheritableThreadLocal 无法得到想要的结果，**也就是在使用线程池等会池化复用线程的执行组件情况下，异步执行执行任务，需要传递上下文的情况**。
+`ThreadLocal`实现线程内部变量共享，`InheritableThreadLocal`实现了父线程与子线程的变量继承。但是还有一种场景，`InheritableThreadLocal`无法得到想要的结果，**也就是在使用线程池等会池化复用线程的执行组件情况下，异步执行执行任务，需要传递上下文的情况**。
 
-因为线程池中的线程是复用的，并没有重新初始化线程，InheritableThreadLocal之所以起作用是因为在Thread类中最终会调用init()方法去把InheritableThreadLocal的map复制到子线程中。由于线程池复用了已有线程，所以没有调用init()方法这个过程，也就不能将父线程中的InheritableThreadLocal值传给子线程。
+因为线程池中的线程是复用的，并没有重新初始化线程，`InheritableThreadLocal`之所以起作用是因为在`Thread`类中最终会调用init()方法去把`InheritableThreadLocal`的map复制到子线程中。由于线程池复用了已有线程，所以没有调用init()方法这个过程，也就不能将父线程中的`InheritableThreadLocal`值传给子线程。
 
 ```java
 public class ThreadDemo implements Runnable {
@@ -490,7 +498,7 @@ public class ThreadDemo implements Runnable {
 
 # TransmittableThreadLocal
 
-针对上述情况，阿里开源了一个`TTL库`，即Transmittable ThreadLocal来解决这个问题，接下来通过一个示例演示`TransmittableThreadLocal`是否能够在线程池中实现上下文的传递，并且满足任务间上下文的隔离效果：
+针对上述情况，阿里开源了一个`TTL库`，即`Transmittable ThreadLoca`l来解决这个问题，接下来通过一个示例演示`TransmittableThreadLocal`是否能够在线程池中实现**上下文的传递**，并且满足任务间上下文的**隔离效果**：
 
 ```java
 public class ThreadDemo implements Runnable {
@@ -503,14 +511,12 @@ public class ThreadDemo implements Runnable {
         transmittableThreadLocal.set("旭春秋");
         Runnable task = new ThreadDemo();
         //首次提交任务
-        executorService.submit(TtlRunnable.get(task));
+        TtlRunnable ttlRunnable = TtlRunnable.get(task);
+        transmittableThreadLocal.set("test");
+        executorService.submit(ttlRunnable);
         //主线程修改值后需要再次提交任务
         transmittableThreadLocal.set("麦克阿旭");
         executorService.submit(TtlRunnable.get(task));
-    }
-    @Override
-    public void run() {
-        System.out.println("子线程transmittableThreadLocal：" + transmittableThreadLocal.get());
     }
 }
 
@@ -525,17 +531,19 @@ public class ThreadDemo implements Runnable {
 >
 > 2.准备了两个任务，第一个任务检查是否能够拿到正确的上下文数据；第二个任务测试是否因为第一个任务修改上下文受到影响；
 
-可以看出子线程中成功获取到了主线程中修改后的值。
+可以看出子线程中成功获取到了主线程中修改后的值，但是为什么预期的`test`没有打印呢？
+
+这里先卖个关子，之后会在`如何维护`这一节进行解析。
 
 ## 使用
 
-- 包装任务
+### 包装任务
 
 通过上述示例，可以观察到`TransmittableThreadLocal`和`TtlRunnable`是配套使用的，即通过`TtlRunnable`包装`Runnable`接口的所有实例
 
 无独有偶，针对`Callable`下的实例，也可以使用`TtlCallable.get()`来包装
 
-- 包装线程池
+### 包装线程池
 
 但每次包装任务这种方法显得有些繁琐，业务场景多使用线程池，能不能让线程池代替实现包装功能呢？
 
@@ -576,9 +584,11 @@ public void execute(@NonNull Runnable command) {
 public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> implements TtlCopier<T> 
 ```
 
-### 缓存容器holder
+### 缓存容器 holder
 
-在`TransimittableThreadLocal`中添加`holder`属性。这个属性的作用就是被标记为具备线程传递资格的对象都会被添加到这个对象中。**要标记一个类，比较容易想到的方式，就是给这个类新增一个****`Type`****字段，还有一个方法就是将具备这种类型的的对象都添加到一个静态全局集合中。之后使用时，这个集合里的所有值都具备这个标记。**
+在`TransimittableThreadLocal`中存在`holder`属性。这个属性的作用就是被标记为具备线程传递资格的对象都会被添加到这个对象中。
+
+**要标记一个类，比较容易想到的方式，就是给这个类新增一个`Type`字段，还有一个方法就是将具备这种类型的的对象都添加到一个静态全局集合中，之后使用时，这个集合里的所有值都具备这个标记。**
 
 1. `holder`本身是一个`InheritableThreadLocal`对象
 2. 这个`holder`对象的`value`是`WeakHashMap<TransmittableThreadLocal<Object>, ?>`
@@ -625,7 +635,7 @@ public final void remove() {
 }
 ```
 
-添加和删除逻辑也比较简单，但需要注意的是holder存储的key是父线程TransmittableThreadLocal的引用，value则为空值
+添加和删除逻辑也比较简单，但需要注意的是`holder`存储的`key`是父线程`TransmittableThreadLocal`的引用，`value`则为空值
 
 ```java
 private void addThisToHolder() {
@@ -650,6 +660,12 @@ private void removeThisFromHolder() {
 
 无论是通过包装任务还是包装线程池的方式，底层都会通过`TtlRunnable.get(runnable)`进行增强调用，会调用到TtlRunnable的构造方法，然后调用到`capture()`拷贝方法
 
+方法步骤如下：
+
+1. 捕获当前线程中的是所有`TransimittableThreadLocal`和注册`ThreadLocal`的值。
+2. 捕获`TransimittableThreadLocal`的值，将`holder`中的所有值都添加到`HashMap`后返回。
+3. 捕获注册的`ThreadLocal`的值，也就是原本线程中的`ThreadLocal`,可以注册到`TTL`中，在进行线程池本地变量传递时也会被传递。
+
 ```java
 public final class TtlRunnable implements Runnable, TtlWrapper<Runnable>, TtlEnhanced, TtlAttachments {
     private TtlRunnable(@NonNull Runnable runnable, boolean releaseTtlValueReferenceAfterRun) {
@@ -661,26 +677,30 @@ public final class TtlRunnable implements Runnable, TtlWrapper<Runnable>, TtlEnh
     }
 }
 
-/**************************************************
+/**
+ * 1.
  * capture()：拷贝副本
- * - 分为TTL拷贝、ThreadLocal拷贝
- **************************************************/
+ * 分为TTL拷贝、ThreadLocal拷贝
+ */
 public static Object capture() {
     // 抓取快照
     return new Snapshot(captureTtlValues(), captureThreadLocalValues());
 }
+
+// 2.
 /** 抓取 TransmittableThreadLocal 的快照 **/
-private static WeakHashMap<TransmittableThreadLocalCode<Object>, Object> captureTtlValues() {
-    WeakHashMap<TransmittableThreadLocalCode<Object>, Object> ttl2Value = new WeakHashMap<TransmittableThreadLocalCode<Object>, Object>();
+private static HashMap<TransmittableThreadLocal<Object>, Object> captureTtlValues() {
+    HashMap<TransmittableThreadLocal<Object>, Object> ttl2Value = new HashMap<TransmittableThreadLocal<Object>, Object>();
     // 主线程和子线程其实都是共用一个holder的，所以主线程new一个TTL并做一个set操作之后，会搞一份数据put到holder中。
     // 这时候就可以进行一个副本的拷贝，遍历holder子线程的值，然后拷贝一份出来
     // eg：主线程用这个ttl.set("我是主线程");，这时候holder就会对应多了要给ttl，并且值是"我是主线程"
-    for (TransmittableThreadLocalCode<Object> threadLocal : holder.get().keySet()) {
-        // threadLocal.copyValue()默认还是拷贝引用
+    for (TransmittableThreadLocal<Object> threadLocal : holder.get().keySet()) {
         ttl2Value.put(threadLocal, threadLocal.copyValue());
     }
     return ttl2Value;
 }
+
+// 3.
 /** 抓取 ThreadLocal 的快照 **/
 private static WeakHashMap<ThreadLocal<Object>, Object> captureThreadLocalValues() {
     final WeakHashMap<ThreadLocal<Object>, Object> threadLocal2Value = new WeakHashMap<ThreadLocal<Object>, Object>();
@@ -696,6 +716,10 @@ private static WeakHashMap<ThreadLocal<Object>, Object> captureThreadLocalValues
 ```
 
 ### 如何维护
+
+替换`TransmittableThreadLocal`，将原线程中线程变量先拷贝一份，然后设置`ttl`值。
+
+`replay()`就是将捕获到的本地变量进行替换子线程的本地变量，并且返回子线程现有的本地变量副本`backup`。用于在执行`run/call`方法之后，将本地变量副本恢复。
 
 ```java
 @Override
@@ -751,8 +775,6 @@ private static WeakHashMap<TransmittableThreadLocalCode<Object>, Object> replayT
         // clear the TTL values that is not in captured
         // avoid the extra TTL values after replay when run task
         // 清除本次没有传递过来的 ThreadLocal，和对应值
-        //  -- 第一点：可能会有因为 InheritableThreadLocal 而传递并保留的值
-        //  -- 第二点：保证主线程set过的ThreadLocal不被传递过来。明确其传递是由业务代码控制，就是明确 set 过值的
         if (!captured.containsKey(threadLocal)) {
             iterator.remove();
             threadLocal.superRemove();
@@ -828,7 +850,21 @@ private static void setTtlValuesTo( WeakHashMap<TransmittableThreadLocalCode<Obj
 }
 ```
 
-可以看到，TtlRunnable利用`holder`维护了一个**线程级别的的****缓存**，每次调用run()前后进行set和还原数据。
+可以看到，`TtlRunnable`利用`holder`维护了一个**线程级别的的****缓存**，每次调用run()前后进行set和还原数据。
+
+#### 为什么没有打印test？
+
+回到本节一开始的问题，为什么我们的代码没有打印`test`，最重要的一点就是Timing！
+
+回顾前文，无论是通过包装任务还是包装线程池的方式，底层都会通过`TtlRunnable.get(runnable)`进行增强调用，会调用到`TtlRunnable`的构造方法，然后调用到`capture()`拷贝方法。也就是说，拷贝父线程`ThreadLocal`快照的节点是在包装任务的时刻进行。
+
+那么子线程获得父线程变量的时间节点呢？其实是在维护阶段进行，通过replay()获取父线程`ThreadLocal`快照，然后`setTtlValuesTo(captured)`
+
+如果我们在创建`Runnable`之后又重设TTL的Value，例如本次demo设置为`test`，那么将`Value`将回放到`旭春秋`
+
+![img](https://poizon.feishu.cn/space/api/box/stream/download/asynccode/?code=M2E5MjZlOTU2YzVkNTdjODU0YjYyYWYzYjZmYzQ5MWVfOGw0NnBNeEpUbWdQYVVvUEdpVktweTlZeGZUak82YWdfVG9rZW46UkNrV2JsT3Z0b1NGUnR4aG1SRmNQSnpObmVkXzE3Mjk5NTMwOTA6MTcyOTk1NjY5MF9WNA)
+
+所幸上述情况只会在包装任务的使用方式出现，推荐大家还是使用包装线程池的使用姿势~
 
 ## 其他注意点
 
