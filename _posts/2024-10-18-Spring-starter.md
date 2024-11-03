@@ -24,7 +24,7 @@ mindmap2: false
 
 1. 首先创建一个配置类，如下
 
-```Java
+```java
 @ConfigurationProperties(prefix = "demo")
 @Data
 public class DemoConfig {
@@ -42,7 +42,7 @@ demo.age=10
 
 1. 配置服务类：
 
-```Java
+```java
 @Component
 @EnableConfigurationProperties(DemoConfig.class)
 public class DemoAutoConfiguration implements ApplicationRunner {
@@ -87,7 +87,7 @@ demo.age=20
 
 编写测试用例：
 
-```Java
+```java
 public class StarterDemo implements ApplicationRunner {
 
     @Resource
@@ -102,7 +102,7 @@ public class StarterDemo implements ApplicationRunner {
 
 运行结果：
 
-```Java
+```java
 DemoConfig(name=wangwu, age=20)
 ```
 
@@ -112,7 +112,7 @@ DemoConfig(name=wangwu, age=20)
 
 spring-boot maven打包，一般pom.xml文件里会加
 
-```JavaScript
+```javaScript
  <plugin>
      <groupId>org.springframework.boot</groupId>
      <artifactId>spring-boot-maven-plugin</artifactId>
@@ -125,7 +125,7 @@ spring-boot maven打包，一般pom.xml文件里会加
 
 **解决办法: 如果A子模块包依赖了B子模块包，在B子模块的pom文件，加入 configuration.skip = true**
 
-```JavaScript
+```javaScript
  <plugin>
      <groupId>org.springframework.boot</groupId>
      <artifactId>spring-boot-maven-plugin</artifactId>

@@ -185,7 +185,7 @@ IntelliJ Platform Plugin SDK 就是开发 IntelliJ 平台插件的 SDK，是基�
 
 接下来在`actionPerformed`方法中编写动作代码，这里写一段代码使之弹出一个对话框
 
-```Java
+```java
 public class ShowHelloAction extends AnAction {
 
     @Override
