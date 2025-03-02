@@ -39,7 +39,7 @@ CPU使用率指的是程序在运行期间实时占用的CPU百分比，这是�
 
 load average <= cpu核数 * 0.7  或  load average <= cpu核数 - 1
 
-![img](https://cdn.nlark.com/yuque/0/2025/png/28649518/1740911661844-dc0ab226-3db5-4c87-8083-618803e9c986.png)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/os/image.99tht30dhb.webp)
 
 ### cpu负载的计算
 
