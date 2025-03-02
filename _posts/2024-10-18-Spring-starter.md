@@ -69,7 +69,7 @@ public class DemoAutoConfiguration implements ApplicationRunner {
 
 ![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/java/image.7ljzuhiz3m.webp)
 
-```Properties
+```properties
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
 com.example.demo.DemoAutoConfiguration
 ```
@@ -112,7 +112,7 @@ DemoConfig(name=wangwu, age=20)
 
 spring-boot maven打包，一般pom.xml文件里会加
 
-```javaScript
+```xml
  <plugin>
      <groupId>org.springframework.boot</groupId>
      <artifactId>spring-boot-maven-plugin</artifactId>
@@ -125,7 +125,7 @@ spring-boot maven打包，一般pom.xml文件里会加
 
 **解决办法: 如果A子模块包依赖了B子模块包，在B子模块的pom文件，加入 configuration.skip = true**
 
-```javaScript
+```xml
  <plugin>
      <groupId>org.springframework.boot</groupId>
      <artifactId>spring-boot-maven-plugin</artifactId>
