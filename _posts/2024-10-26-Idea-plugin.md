@@ -1,7 +1,7 @@
 ---
 layout: post
 title: idea 插件开发demo
-categories: [java]
+categories: [Java]
 description: 演示一下基本步骤
 keywords: java,idea
 mermaid: false

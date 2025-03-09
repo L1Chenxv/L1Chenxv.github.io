@@ -1,7 +1,7 @@
 ---
 layout: post
 title: ThreadLocal 演变之路
-categories: [java]
+categories: [Java]
 description: ThreadLocal 演变之路
 mermaid: false
 sequence: false

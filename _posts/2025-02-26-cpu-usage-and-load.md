@@ -1,7 +1,7 @@
 ---
 layout: post
 title: CPU使用率和负载
-categories: [os]
+categories: [OS]
 description: 对CPU使用率和负载介绍
 keywords: os,cpu
 mermaid: false

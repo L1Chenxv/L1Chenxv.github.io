@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Springboot利用Spring SPI开发starter
-categories: [java]
+categories: [Java]
 description: 
 keywords: java,spring
 mermaid: false
