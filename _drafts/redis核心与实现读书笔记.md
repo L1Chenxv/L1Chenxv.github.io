@@ -70,7 +70,7 @@ Redis 4.0 中提出了一个**混合使用 AOF 日志和内存快照**的方法�
 
 **基于** **pub/sub** **机制的客户端事件通知**
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.1fg810sjub40.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.1fg810sjub40.webp)
 
 知道了这些频道之后，你就可以**让客户端从哨兵这里订阅消息**了。具体的操作步骤是，客
 
@@ -134,7 +134,7 @@ Redis 应对数据量增多的两种方案：纵向扩展（scale up）
 
 50GB 磁盘的实例，现在使用三个相同配置的实例。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.2dhlvdj4w18g.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.2dhlvdj4w18g.webp)
 
 纵向扩展的好处是，**实施起来简单、直接**。不过，这个方案也面临两个潜在的问题
 
@@ -186,7 +186,7 @@ bgsave 子进程复制主线程的页表以后，假如主线程需要修改虚�
 
 虚页 7 的原始数据写入 RDB 文件。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.3e4xd1rt3v80.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.3e4xd1rt3v80.webp)
 
 
 
@@ -198,7 +198,7 @@ bgsave 子进程复制主线程的页表以后，假如主线程需要修改虚�
 
 数据类型的实际数据所在，例如指向 String 类型的 SDS 结构所在的内存地址
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.l32q10ffj28.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.l32q10ffj28.webp)
 
 一方面，当保存的是 Long 类型整数时，RedisObject 中的指针就直接赋值为整数数据
 
@@ -222,7 +222,7 @@ RedisObject 布局在一起了，而是会给 SDS 分配独立的空间，并用
 
 分别指向 key、value 以及下一个 dictEntry，三个指针共 24 字节，如下图所示：
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.13hfy4dvkb1c.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.13hfy4dvkb1c.webp)
 
 但是，这三个指针只有 24 字节，为什么会占用了 32 字节呢？这就要提到 Redis 使用的内存分配库 jemalloc 了。
 
@@ -284,7 +284,7 @@ HyperLogLog 的统计规则是基于概率完成的，所以它给出
 
 的统计结果是有一定误差的，标准误算率是 0.81%
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.1s2xh036umn4.png)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.1s2xh036umn4.png)
 
 ### 保存时间序列数据
 
@@ -391,7 +391,7 @@ FLUSHALL AYSNC
 
 ### CPU多核对Redis性能的影响
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.1lrvduddtqu8.png)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.1lrvduddtqu8.png)
 
 在多核 CPU 的场景下，一旦应用程序需要在一个新的 CPU 核上运行，那么，运行时信息就需要重新加载到新的 CPU 核上。而且，新的 CPU 核的 L1、L2 缓存也需要重新加载数据和指令，这会导致程序的运行时间增加
 
@@ -467,9 +467,9 @@ config set activedefrag yes
 
 ### 缓冲区
 
-为了避免客户端和服务器端的**请求发送和处理速度不匹配**，服务器端给每个连接的客户端都设置了一个输入缓冲区和输出缓冲区，我们称之为客户端输入缓冲区和输出缓冲区。输入缓冲区会先把客户端发送过来的命令暂存起来，Redis 主线程再从输入缓冲区中读取命令，进行处理。当 Redis 主线程处理完数据后，会把结果写入到输出缓冲区，再通过输出缓冲区返回给客户端，如下图所示：
+为了避免客户端和服务器端的**请求发送和处理速度不匹配**，服务器端**给每个连接的客户端**都设置了一个输入缓冲区和输出缓冲区，我们称之为客户端输入缓冲区和输出缓冲区。输入缓冲区会先把客户端发送过来的命令暂存起来，Redis 主线程再从输入缓冲区中读取命令，进行处理。当 Redis 主线程处理完数据后，会把结果写入到输出缓冲区，再通过输出缓冲区返回给客户端，如下图所示：
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.4ylblmx54x40.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.4ylblmx54x40.webp)
 
 **复制缓冲区**
 
@@ -620,7 +620,7 @@ redis.delKey(X)
 
 在删除缓存值、更新数据库的这两步操作中，有其他线程的并发读操作，导致其他线程读取到旧值，应对方案是延迟双删。
 
-![image-20230713201124476](C:/Users/94342/AppData/Roaming/Typora/typora-user-images/image-20230713201124476.png)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.1w7492prz8bk.webp)
 
 在大多数业务场景下，我们会把 Redis 作为只读缓存使用。针对只读缓存来说，我们既可以先删除缓存值再更新数据库，也可以先更新数据库再删除缓存。我的建议是，优先使用先更新数据库再删除缓存的方法，原因主要有两个：
 
@@ -673,7 +673,7 @@ redis.delKey(X)
 
 跟缓存雪崩、缓存击穿这两类问题相比，缓存穿透的影响更大一些，希望你能重点关注一下。从预防的角度来说，我们需要避免误删除数据库和缓存中的数据；从应对角度来说，我们可以在业务系统中使用缓存空值或缺省值、使用布隆过滤器，以及进行恶意请求检测等方法。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.38be8cyv9ve0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.38be8cyv9ve0.webp)
 
 ### 缓存污染
 
@@ -724,7 +724,7 @@ WATCH 机制的作用是，在事务执行前，监控一个或多个键的值�
 
 WATCH 机制的具体实现是由 WATCH 命令实现的，我给你举个例子，你可以看下下面的图，进一步理解下 WATCH 命令的使用。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.2ky7tosskdg0.png)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.2ky7tosskdg0.png)
 
 **持久性**
 
@@ -764,7 +764,7 @@ WATCH 机制的具体实现是由 WATCH 命令实现的，我给你举个例子�
 
 我们在应用 Redis 时，可以周期性地运行这个流程来监测主从库间的不一致情况。为了帮助你更好地理解这个方法，我画了一张流程图，你可以看下。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.7hr11n9lkw40.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.7hr11n9lkw40.webp)
 
 #### 数据丢失
 
@@ -813,7 +813,7 @@ Redis 配置里有一个参数 min-slaves-max-lag，表示一旦所有的从节�
 
 这 4 个命令的参数和含义如下表所示：
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/image.5f3260kit2o0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/image.5f3260kit2o0.webp)
 
 举个例子，当主从库全量同步时，如果主库接收到了一条 EXPIRE 命令，那么，主库会直接执行这条命令。这条命令会在全量同步完成后，发给从库执行。而从库在执行时，就会在当前时间的基础上加上数据的存活时间，这样一来，从库上数据的过期时间就会比主库上延后了。
 

@@ -16,7 +16,7 @@ mysql45讲读书笔记
 
 # 基础架构
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6mz418u1kpc0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6mz418u1kpc0.webp)
 
 MySQL 可以分为 Server 层和存储引擎层两部分。
 
@@ -60,9 +60,20 @@ MySQL 从你输入的"select"这个关键字识别出来，这是一个查询语
 
  redo log 是 InnoDB 引擎特有的日志
 
-当有一条记录需要更新的时候，InnoDB 引擎就会先把记录写到 redo log（粉板）里面，并更新内存，这个时候更新就算完成了。同时，InnoDB 引擎会在适当的时候，
+当有一条记录需要更新的时候，InnoDB 引擎就会先把记录写到 redo log（粉板）里面，并更新内存，这个时候更新就算完成了。同时，InnoDB 引擎会在适当的时候，将这个操作记录更新到磁盘里面，而这个更新往往是在系统比较空闲的时候做，InnoDB 的 redo log 是固定大小的，比如可以配置为一组 4 个文件，每个文件的大小是 1GB，那么这块“粉板”总共就可以记录 4GB 的操作。从头开始写，写到末尾就又回到开头循环写
 
-将这个操作记录更新到磁盘里面，而这个更新往往是在系统比较空闲的时候做，InnoDB 的 redo log 是固定大小的，比如可以配置为一组 4 个文件，每个文件的大小是 1GB，那么这块“粉板”总共就可以记录 4GB 的操作。从头开始写，写到末尾就又回到开头循环写
+#### 为什么Mysql会抖一下
+
+InnoDB 的策略是尽量使用内存，因此对于一个长时间运行的库来说，未被使用的页面很少。
+
+而当要读入的数据页没有在内存的时候，就必须到缓冲池中申请一个数据页。这时候只能把最久不使用的数据页从内存中淘汰掉：如果要淘汰的是一个干净页，就直接释放出来复用；但如果是脏页呢，就必须将脏页先刷到磁盘，变成干净页后才能复用。
+
+所以，刷脏页虽然是常态，但是出现以下这两种情况，都是会明显影响性能的：
+
+1. 一个查询要淘汰的脏页个数太多，会导致查询的响应时间明显变长；
+2. 日志写满，更新全部堵住，写性能跌为 0，这种情况对敏感业务来说，是不能接受的。
+
+所以，InnoDB 需要有控制脏页比例的机制，来尽量避免上面的这两种情况。
 
 ## **binlog**
 
@@ -92,23 +103,33 @@ redo log 用于保证 crash-safe 能力。innodb_flush_log_at_trx_commit 这个�
 
 sync_binlog 这个参数设置成 1 的时候，表示每次事务的 binlog 都持久化到磁盘。这个参数我也建议你设置成 1，这样可以保证 MySQL 异常重启之后 binlog 不丢失。
 
+
+
+**正常运行中的实例，数据写入后的最终落盘，是从** **redo log** **更新过来的还是从** **buffer pool** **更新过来的呢？**
+
+实际上，redo log 并没有记录数据页的完整数据，所以它并没有能力自己去更新磁盘数据页，也就不存在“数据最终落盘，是由 redo log 更新过去”的情况。
+
+1. 如果是正常运行的实例的话，数据页被修改以后，跟磁盘的数据页不一致，称为脏页。最终数据落盘，就是把内存中的数据页写盘。这个过程，甚至与 redo log 毫无关系。
+
+2. 在崩溃恢复场景中，InnoDB 如果判断到一个数据页可能在崩溃恢复的时候丢失了更新，就会将它读到内存，然后让 redo log 更新内存内容。更新完成后，内存页变成脏页，就回到了第一种情况的状态
+
 ## 组提交
 
 在并发更新场景下，第一个事务写完 redo log buffer 以后，接下来这个 fsync 越晚调用，组员可能越多，节约 IOPS 的效果就越好。
 
 为了让一次 fsync 带的组员更多，MySQL 有一个很有趣的优化：拖时间。在介绍两阶段提交的时候，我曾经给你画了一个图，现在我把它截过来。
 
-<img src="https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.4e31eqjy8fw0.webp" alt="image" style="zoom:67%;" />
+<img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.4e31eqjy8fw0.webp" alt="image" style="zoom:67%;" />
 
 图中，我把“写 binlog”当成一个动作。但实际上，写 binlog 是分成两步的：
 
-\1. 先把 binlog 从 binlog cache 中写到磁盘上的 binlog 文件；
+1. 先把 binlog 从 binlog cache 中写到磁盘上的 binlog 文件；
 
-\2. 调用 fsync 持久化。
+2. 调用 fsync 持久化。
 
 MySQL 为了让组提交的效果更好，把 redo log 做 fsync 的时间拖到了步骤 1 之后。也就是说，上面的图变成了这样：
 
-<img src="https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.eg3q54bni8o.webp" alt="image" style="zoom:67%;" />
+<img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.eg3q54bni8o.webp" alt="image" style="zoom:67%;" />
 
 这么一来，binlog 也可以组提交了。在执行图 5 中第 4 步把 binlog fsync 到磁盘时，如果有多个事务的 binlog 已经写完了，也是一起持久化的，这样也可以减少 IOPS 的消耗。
 
@@ -142,7 +163,7 @@ MySQL 为了让组提交的效果更好，把 redo log 做 fsync 的时间拖到
 
 假设一个值从 1 被按顺序改成了 2、3、4，在回滚日志里面就会有类似下面的记录。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.44vwkhriaws0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.44vwkhriaws0.webp)
 
 当前值是 4，但是在查询这条记录的时候，不同时刻启动的事务会有不同的 read-view。如图中看到的，在视图 A、B、C 里面，这一个记录的值分别是 1、2、4，同一条记录在系统中可以存在多个版本，就是数据库的多版本并发控制（MVCC）。
 
@@ -256,6 +277,206 @@ MySQL 在真正开始执行语句之前，并不能精确地知道满足这个�
 
 **第三种方法是，在有些场景下，我们可以新建一个更合适的索引，来提供给优化器做选择，或删掉误用的索引。**
 
+# Order by
+
+### 全字段排序
+
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6ezzoe8vy9o0.png)
+
+图中“按 name 排序”这个动作，可能在内存中完成，也可能需要使用外部排序，这取决于排序所需的内存和参数 sort_buffer_size。
+
+sort_buffer_size，就是 MySQL 为排序开辟的内存（sort_buffer）的大小。如果要排序的数据量小于 sort_buffer_size，排序就在内存中完成。但如果排序数据量太大，内存放不下，则不得不利用磁盘临时文件辅助排序。
+
+可以通过使用`SET optimizer_trace='enabled=on'; `命令来确认是否使用了临时文件
+
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1gezb54p2leo.webp)
+
+number_of_tmp_files 表示的是，排序过程中使用的临时文件数。你一定奇怪，为什么需要 12 个文件？内存放不下时，就需要使用外部排序，外部排序一般使用归并排序算法。可以这么简单理解，**MySQL 将需要排序的数据分成 12 份，每一份单独排序后存在这些临时文件中。然后把这 12 个有序文件再合并成一个有序的大文件。**
+
+如果 sort_buffer_size 超过了需要排序的数据量的大小，number_of_tmp_files 就是 0，表示排序可以直接在内存中完成。
+
+否则就需要放在临时文件中排序。sort_buffer_size 越小，需要分成的份数越多，number_of_tmp_files 的值就越大。
+
+### **rowid** **排序**
+
+在上面这个算法过程里面，只对原表的数据读了一遍，剩下的操作都是在 sort_buffer 和临时文件中执行的。但这个算法有一个问题，就是如果查询要返回的字段很多的话，那么sort_buffer 里面要放的字段数太多，这样内存里能够同时放下的行数很少，要分成很多个临时文件，排序的性能会很差。
+
+新的算法放入 sort_buffer 的字段，只有要排序的列（即 name 字段）和主键 id。
+
+这个执行流程的示意图如下，我把它称为 rowid 排序。
+
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.3raxkh6q3180.webp)
+
+这时候除了排序过程外，在排序完成后，还要根据 id 去原表取值。由于语句是 limit 1000，因此会多读 1000 行。
+
+### **全字段排序** **VS rowid** **排序**
+
+如果 MySQL 实在是担心排序内存太小，会影响排序效率，才会采用 rowid 排序算法，这样排序过程中一次可以排序更多行，但是需要再回到原表去取数据。
+
+如果 MySQL 认为内存足够大，会优先选择全字段排序，把需要的字段都放到 sort_buffer 中，这样排序后就会直接从内存里面返回查询结果了，不用再回到原表去取数据。
+
+这也就体现了 MySQL 的一个设计思想：**如果内存够，就要多利用内存，尽量减少磁盘访问。**
+
+对于 InnoDB 表来说，rowid 排序会要求回表多造成磁盘读，因此不会被优先选择。
+
+# join
+
+在实际生产中，关于 join 语句使用的问题，一般会集中在以下两类：
+
+1. 我们 DBA 不让使用 join，使用 join 有什么问题呢？
+
+2. 如果有两个大小不同的表做 join，应该用哪个表做驱动表呢？
+
+现在有两个表，这两个表都有一个**主键索引 id 和一个索引 a**，字段 b 上无索引。存储过程 idata() 往表 t2 里插入了 1000 行数据，在表 t1 里插入的是 100 行数据
+
+### **Index Nested-Loop Join**
+
+```sql
+select * from t1 straight_join t2 on (t1.a=t2.a);
+```
+
+如果直接使用 join 语句，MySQL 优化器可能会选择表 t1 或 t2 作为驱动表，这样会影响我们分析 SQL 语句的执行过程。所以，为了便于分析执行过程中的性能问题，我改用straight_join 让 MySQL 使用固定的连接方式执行查询，这样优化器只会按照我们指定的方式去 join。在这个语句里，t1 是驱动表，t2 是被驱动表。
+
+这个过程是先遍历表 t1，然后根据从表 t1 中取出的每行数据中的 a 值，去表 t2 中查找满足条件的记录。在形式上，这个过程就跟我们写程序时的嵌套查询类似，并且可以用上被驱动表的索引，所以我们称之为“Index Nested-Loop Join”，简称 NLJ。
+
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.62b7hyzsh5o.webp)
+
+在这个流程里：
+
+1. 对驱动表 t1 做了全表扫描，这个过程需要扫描 100 行；
+
+2. 而对于每一行 R，根据 a 字段去表 t2 查找，走的是树搜索过程。由于我们构造的数据都是一一对应的，因此每次的搜索过程都只扫描一行，也是总共扫描 100 行；
+
+3. 所以，整个执行流程，总扫描行数是 200。
+
+先看第一个问题：**能不能使用 join?**
+
+假设不使用 join，那我们就只能用单表查询。我们看看上面这条语句的需求，用单表查询怎么实现。
+
+1. 执行select * from t1，查出表 t1 的所有数据，这里有 100 行；
+
+2. 循环遍历这 100 行数据：
+
+   从每一行 R 取出字段 a 的值 $R.a；
+
+   执行select * from t2 where a=$R.a；
+
+   把返回的结果和 R 构成结果集的一行。
+
+可以看到，在这个查询过程，也是扫描了 200 行，但是总共执行了 101 条语句，比直接 join 多了 100 次交互。除此之外，客户端还要自己拼接 SQL 语句和结果。
+
+显然，这么做还不如直接 join 好。
+
+
+
+到这里小结一下，通过上面的分析我们得到了两个结论：
+
+1. 使用 join 语句，性能比强行拆成多个单表执行 SQL 语句的性能要好；
+
+2. 如果使用 join 语句的话，需要让小表做驱动表。
+
+但是，你需要注意，这个结论的前提是“**可以使用被驱动表的索引**”。
+
+### **Block Nested-Loop Join**
+
+```sql
+select * from t1 straight_join t2 on (t1.a=t2.b);
+```
+
+由于表 t2 的字段 b 上没有索引，算法的流程是这样的：
+
+1. 把表 t1 的数据读入线程内存 join_buffer 中，由于我们这个语句中写的是 select *，因此是把整个表 t1 放入了内存；
+
+2. 扫描表 t2，把表 t2 中的每一行取出来，跟 join_buffer 中的数据做对比，满足 join 条件的，作为结果集的一部分返回。
+
+这个过程的流程图如下：
+
+![image-20230727141059964](C:/Users/94342/AppData/Roaming/Typora/typora-user-images/image-20230727141059964.png)
+
+接下来，我们来看一下，在这种情况下，应该选择哪个表做驱动表。
+
+假设小表的行数是 N，大表的行数是 M，那么在这个算法里：
+
+1. 两个表都做一次全表扫描，所以总的扫描行数是 M+N；
+
+2. 内存中的判断次数是 M*N。
+
+要是表 t1 是一个大表，
+
+但如果 join_buffer 放不下怎么办呢？
+
+join_buffer 的大小是由参数 join_buffer_size 设定的，默认值是 256k。**如果放不下表 t1的所有数据话，策略很简单，就是分段放。**
+
+我们再来看下，在这种情况下驱动表的选择问题。
+
+假设，驱动表的数据行数是 N，需要分 K 段才能完成算法流程，被驱动表的数据行数是 M。
+
+注意，这里的 K 不是常数，N 越大 K 就会越大，因此把 K 表示为λ*N，显然λ的取值范围是 (0,1)。
+
+所以，在这个算法的执行过程中：
+
+1. 扫描行数是 N+λ*N*M；
+
+2. 内存判断 N*M 次。
+
+显然，内存判断次数是不受选择哪个表作为驱动表影响的。而考虑到扫描行数，在 M 和 N大小确定的情况下，N 小一些，整个算式的结果会更小。
+
+**所以结论是，应该让小表当驱动表。**
+
+刚刚我们说了 N 越大，分段数 K 越大。那么，N 固定的时候，什么参数会影响 K 的大小呢？（也就是λ的大小）答案是 join_buffer_size。join_buffer_size 越大，一次可以放入的行越多，分成的段数也就越少，对被驱动表的全表扫描次数就越少。
+
+这就是为什么，你可能会看到一些建议告诉你，如果你的 join 语句很慢，就把 join_buffer_size 改大。
+
+#### 什么叫做小表？
+
+更准确地说，**在决定哪个表做驱动表的时候，应该是两个表按照各自的条件过滤，过滤完成之后，计算参与 join 的各个字段的总数据量，数据量小的那个表，就是“小表”，应该作为驱动表。**
+
+### **Multi-Range Read** **优化**
+
+这个优化的主要目的是尽量使用顺序读盘。
+
+主键索引是一棵 B+ 树，在这棵树上，每次只能根据一个主键 id 查到一行数据。因此，回表肯定是一行行搜索主键索引的，基本流程如图 1 所示。
+
+<img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.7a4ieslha6w0.webp" alt="image" style="zoom:70%;" />
+
+如果随着 a 的值递增顺序查询的话，id 的值就变成随机的，那么就会出现随机访问，性能相对较差。虽然“按行查”这个机制不能改，但是调整查询的顺序，还是能够加速的。
+
+**因为大多数的数据都是按照主键递增顺序插入得到的，所以我们可以认为，如果按照主键的递增顺序查询的话，对磁盘的读比较接近顺序读，能够提升读性能。**
+
+这，就是 MRR 优化的设计思路。此时，语句的执行流程变成了这样：
+
+1. 根据索引 a，定位到满足条件的记录，将 id 值放入 read_rnd_buffer 中 ;
+
+2. 将 read_rnd_buffer 中的 id 进行递增排序；
+
+3. 排序后的 id 数组，依次到主键 id 索引中查记录，并作为结果返回。
+
+> 这里，read_rnd_buffer 的大小是由 read_rnd_buffer_size 参数控制的。如果步骤 1 中， read_rnd_buffer 放满了，就会先执行完步骤 2 和 3，然后清空 read_rnd_buffer。之后继续找索引 a 的下个记录，并继续循环。
+
+### **Batched Key Access**
+
+ BKA 算法，其实就是对 NLJ 算法的优化。
+
+我们知道 join_buffer 在 BNL 算法里的作用，是暂存驱动表的数据。但是在 NLJ 算法里并没有用。那么，我们刚好就可以复用 join_buffer 到 BKA 算法中。BKA构建好key后，批量传给引擎层做索引查找。
+
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.2hl3u7blkfq0.webp)
+
+图中，我在 join_buffer 中放入的数据是 P1~P100，表示的是只会取查询需要的字段。当然，如果 join buffer 放不下 P1~P100 的所有数据，就会把这 100 行数据分成多段执行上图的流程。
+
+### BNL 算法的性能问题
+
+**大表 join 操作虽然对 IO 有影响，但是在语句执行结束后，对 IO 的影响也就结束了。但是，对 Buffer Pool 的影响就是持续性的，需要依靠后续的查询请求慢慢恢复内存命中率。**
+
+为了减少这种影响，你可以考虑增大 join_buffer_size 的值，减少对被驱动表的扫描次数。
+
+也就是说，BNL 算法对系统的影响主要包括三个方面：
+
+1. 可能会多次扫描被驱动表，占用磁盘 IO 资源；
+
+2. 判断 join 条件需要执行 M*N 次对比（M、N 分别是两张表的行数），如果是大表就会占用非常多的 CPU 资源；
+
+3. 可能会导致 Buffer Pool 的热数据被淘汰，影响内存命中率。
+
 # 锁
 
 Q：当备库用–single-transaction 做逻辑备份的时候，如果从主库的binlog 传来一个 DDL 语句会怎么样？
@@ -331,7 +552,7 @@ DDL 前的表结构。
 
 在 InnoDB 中，innodb_lock_wait_timeout 的默认值是 50s，意味着如果采用第一个策略，当出现死锁以后，第一个被锁住的线程要过 50s 才会超时退出，然后其他线程才有可能继续执行。对于在线服务来说，这个等待时间往往是无法接受的。但如果设置时间太短，很有可能只是锁等待的锁也会解开，造成误伤
 
-所以，正常情况下我们还是要采用第二种策略，即：主动死锁检测，而且innodb_deadlock_detect 的默认值本身就是 on。主动死锁检测在发生死锁的时候，是能够快速发现并进行处理的，但是它也是有额外负担的。
+所以，**正常情况下我们还是要采用第二种策略**，即：主动死锁检测，而且innodb_deadlock_detect 的默认值本身就是 on。主动死锁检测在发生死锁的时候，是能够快速发现并进行处理的，但是它也是有额外负担的。
 
 这种负担在于死锁检测要耗费大量的CPU资源。
 
@@ -339,13 +560,35 @@ DDL 前的表结构。
 
 **另一个思路是控制并发度。**
 
+### 加锁规则
 
+默认是可重复读隔离级别。
+
+**我总结的加锁规则里面，包含了两个“原则”、两个“优化”和一个“bug”。**
+
+1. 原则 1：加锁的基本单位是 next-key lock。希望你还记得，next-key lock 是前开后闭
+
+区间。
+
+2. 原则 2：查找过程中访问到的对象才会加锁。
+
+3. 优化 1：索引上的等值查询，给唯一索引加锁的时候，next-key lock 退化为行锁。
+
+4. 优化 2：索引上的**等值查询**，向右遍历时且最后一个值不满足等值条件的时候，next-key lock 退化为间隙锁。
+
+5. 一个 bug：唯一索引上的范围查询会访问到不满足条件的第一个值为止。
+
+注意：
+
+lock in share mode 只锁覆盖索引，但是如果是 for update 就不一样了。 执行 for update 时，系统会认为你接下来要更新数据，因此会顺便给主键索引上满足条件的行加上行锁。
+
+这个例子说明，锁是加在索引上的；同时，它给我们的指导是，如果你要用 lock in share mode 来给行加读锁避免数据被更新的话，就必须得绕过覆盖索引的优化，在查询字段中加入索引中不存在的字段。比如，将 session A 的查询语句改成 select d from t wherec=5 lock in share mode。
 
 # 高可用
 
 ### **MySQL** **主备的基本原理**
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.5gbnx1uiho80.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.5gbnx1uiho80.webp)
 
 在状态 1 中，客户端的读写都直接访问节点 A，而节点 B 是 A 的备库，只是将 A 的更新都同步过来，到本地执行。这样可以保持节点 B 和 A 的数据是相同的。当需要切换的时候，就切成状态 2。这时候客户端读写访问的都是节点 B，而节点 A 是 B的备库。
 
@@ -361,7 +604,7 @@ DDL 前的表结构。
 
 接下来，我们再看看**节点 A 到 B 这条线的内部流程是什么样的**。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.5s3newrebm80.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.5s3newrebm80.webp)
 
 
 
@@ -371,9 +614,9 @@ binlog 的特性确保了在备库执行相同的 binlog，可以得到与主库
 
 因此，我们可以认为正常情况下主备的数据是一致的。也就是说，图 1 中 A、B 两个节点的内容是一致的。其实，图 1 中我画的是 M-S 结构，但实际生产上使用比较多的是双 M结构，也就是图 9 所示的主备切换流程。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.7kfbrl8z37o0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.7kfbrl8z37o0.webp)
 
-对比图 9 和图 1，你可以发现，双 M 结构和 M-S 结构，其实区别只是多了一条线，即：节点 A 和 B 之间总是互为主备关系。这样在切换的时候就不用再修改主备关系。
+对比图 9 和图 1，你可以发现，双 M 结构和 M-S 结构，其实区别只是多了一条线，即：节点 A 和 B 之间总是互为主备关系。这样在切换的时候就**不用再修改主备关系**。
 
 但是，双 M 结构还有一个问题需要解决。
 
@@ -383,11 +626,11 @@ binlog 的特性确保了在备库执行相同的 binlog，可以得到与主库
 
 因此，我们可以用下面的逻辑，来解决两个节点间的循环复制的问题：
 
-\1. 规定两个库的 server id 必须不同，如果相同，则它们之间不能设定为主备关系；
+1. 规定两个库的 server id 必须不同，如果相同，则它们之间不能设定为主备关系；
 
-\2. 一个备库接到 binlog 并在重放的过程中，生成与原 binlog 的 server id 相同的新的binlog；
+2. 一个备库接到 binlog 并在重放的过程中，生成与原 binlog 的 server id 相同的新的binlog；
 
-\3. 每个库在收到从自己的主库发过来的日志后，先判断 server id，如果跟自己的相同，表示这个日志是自己生成的，就直接丢弃这个日志。
+3. 7每个库在收到从自己的主库发过来的日志后，先判断 server id，如果跟自己的相同，表示这个日志是自己生成的，就直接丢弃这个日志。
 
 ### **主备延迟**
 
@@ -451,7 +694,7 @@ binlog 的特性确保了在备库执行相同的 binlog，可以得到与主库
 
 这个切换流程，一般是由专门的 HA 系统来完成的，我们暂时称之为可靠性优先流程。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6axyvpv2ol00.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6axyvpv2ol00.webp)
 
 备注：图中的 SBM，是 seconds_behind_master 参数的简写。
 
@@ -463,7 +706,7 @@ binlog 的特性确保了在备库执行相同的 binlog，可以得到与主库
 
 图 3 是**可用性优先策略，且 binlog_format=mixed**时的切换流程和数据结果。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.3k5cmenop2m0.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.3k5cmenop2m0.webp)
 
 现在，我们一起分析下这个切换流程：
 
@@ -485,7 +728,7 @@ binlog 的特性确保了在备库执行相同的 binlog，可以得到与主库
 
 从单线程复制到最新版本的多线程复制，中间的演化经历了好几个版本。其实说到底，所有的多线程复制机制，都是要把图 1 中只有一个线程的 sql_thread，拆成多个线程，也就是都符合下面的这个模型：
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.7c4l4tp1yn80.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.7c4l4tp1yn80.webp)
 
 coordinator 就是原来的 sql_thread, 不过现在它不再直接更新数据了，只负责读取中转日志和分发事务。真正更新日志的，变成了 worker 线程。而 work 线程的个数，就是由参数 slave_parallel_workers 决定的。根据我的经验，把这个值设置为 8~16 之间最好（32 核物理机的情况），毕竟备库还有可能要提供读查询，不能把 CPU 都吃光了。
 
@@ -503,7 +746,7 @@ coordinator 在分发的时候，需要满足以下这两个基本要求：
 
 当然，如果有跨表的事务，还是要把两张表放在一起考虑的。如图 3 所示，就是按表分发的规则。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1kos4xnsi09s.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1kos4xnsi09s.webp)
 
 可以看到，每个 worker 线程对应一个 hash 表，用于保存当前正在这个 worker 的“执行队列”里的事务所涉及的表。hash 表的 key 是“库名. 表名”，value 是一个数字，表示队列中有多少个事务修改这个表。
 
@@ -521,7 +764,7 @@ coordinator 在分发的时候，需要满足以下这两个基本要求：
 
 **按行分发策略（自研）**
 
-要解决热点表的并行复制问题，就需要一个按行并行复制的方案。按行复制的核心思路是：如果两个事务没有更新相同的行，它们在备库上可以并行执行。显然，这个模式要求binlog 格式必须是 row。
+要解决热点表的并行复制问题，就需要一个按行并行复制的方案。按行复制的核心思路是：如果两个事务没有更新相同的行，它们在备库上可以并行执行。显然，**这个模式要求binlog 格式必须是 row**。
 
 按行复制和按表复制的数据结构差不多，也是为每个 worker，分配一个 hash 表。只是要实现按行分发，这时候的 key，就必须是“库名 + 表名 + 唯一键的值”。
 
@@ -529,7 +772,7 @@ coordinator 在分发的时候，需要满足以下这两个基本要求：
 
 假设，接下来我们要在主库执行这两个事务：
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.bj1iysegslk.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.bj1iysegslk.webp)
 
 可以看到，这两个事务要更新的行的主键值不同，但是如果它们被分到不同的 worker，就有可能 session B 的语句先执行。这时候 id=1 的行的 a 的值还是 1，就会报唯一键冲突。
 
@@ -583,7 +826,7 @@ MariaDB的并行复制策略利用的就是如下特性：
 
 上面提到的 MariaDB 这个策略的核心，是“所有处于 commit”状态的事务可以并行。事务处于 commit 状态，表示已经通过了锁冲突的检验了。
 
-<img src="https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.eg3q54bni8o.webp" alt="image" style="zoom:33%;" />
+<img src="https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.eg3q54bni8o.webp" alt="image" style="zoom:33%;" />
 
 其实，不用等到 commit 阶段，只要能够到达 redo log prepare 阶段，就表示事务已经通过锁冲突的检验了。
 
@@ -593,7 +836,29 @@ MariaDB的并行复制策略利用的就是如下特性：
 
 2. 处于 prepare 状态的事务，与处于 commit 状态的事务之间，在备库执行时也是可以并行的。
 
+**MySQL 5.7.22** **的并行复制策略**
 
+MySQL 增加了一个新的并行复制策略，基于 WRITESET 的并行复制。
+
+相应地，新增了一个参数 binlog-transaction-dependency-tracking，用来控制是否启用这个新策略。这个参数的可选值有以下三种。
+
+1. COMMIT_ORDER，表示的就是前面介绍的，根据同时进入 prepare 和 commit 来判断是否可以并行的策略。
+2. WRITESET，表示的是对于事务涉及更新的每一行，计算出这一行的 hash 值，组成集合writeset。如果两个事务没有操作相同的行也就是说它们的 writeset 没有交集，就可以并行。
+3. WRITESET_SESSION，是在 WRITESET 的基础上多了一个约束，即在主库上同一个线程先后执行的两个事务，在备库执行的时候，要保证相同的先后顺序。
+
+当然为了唯一标识，这个 hash 值是通过“库名 + 表名 + 索引名 + 值”计算出来的。如果一个表上除了有主键索引外，还有其他唯一索引，那么对于每个唯一索引，insert 语句对应的 writeset 就要多增加一个 hash 值
+
+你可能看出来了，这跟我们前面介绍的基于 MySQL 5.5 版本的按行分发的策略是差不多的。不过，MySQL 官方的这个实现还是有很大的优势：
+
+1. writeset 是在主库生成后直接写入到 binlog 里面的，这样在备库执行的时候，不需要解析 binlog 内容（event 里的行数据），节省了很多计算量；
+
+2. 不需要把整个事务的 binlog 都扫一遍才能决定分发到哪个 worker，更省内存；
+
+3. 由于备库的分发策略不依赖于 binlog 内容，所以 binlog 是 statement 格式也是可以
+
+的。
+
+因此，MySQL 5.7.22 的并行复制策略在通用性上还是有保证的。当然，对于“表上没主键”和“外键约束”的场景，WRITESET 策略也是没法并行的，也会暂时退化为单线程模型。
 
 # 故障处理
 
@@ -601,13 +866,13 @@ MariaDB的并行复制策略利用的就是如下特性：
 
 如图 1 所示，就是一个基本的一主多从结构。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1sprudj6gwtc.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1sprudj6gwtc.webp)
 
 图中，虚线箭头表示的是主备关系，也就是 A 和 A’互为主备， 从库 B、C、D 指向的是主库 A。一主多从的设置，一般用于读写分离，主库负责所有的写入和一部分读，其他的读请求则由从库分担。
 
 如图 2 所示，就是主库发生故障，主备切换后的结果。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.46ymow2totw.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.46ymow2totw.webp)
 
 相比于一主一备的切换流程，一主多从结构在切换完成后，A’会成为新的主库，从库 B、C、D 也要改接到 A’。正是由于多了从库 B、C、D 重新指向的这个过程，所以主备切换的复杂性也相应增加了。
 
@@ -738,7 +1003,7 @@ Executed_Gtid_Set，是备库所有已经执行完成的 GTID 集合。
 
 我们上面判断主备无延迟的逻辑，是“备库收到的日志都执行完成了”。但是，从 binlog在主备之间状态的分析中，不难看出还有一部分日志，处于客户端已经收到提交确认，而备库还没收到日志的状态。
 
-![image](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1ivsmrj25tog.webp)
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.1ivsmrj25tog.webp)
 
 **配合** **semi-sync**
 
@@ -785,6 +1050,8 @@ GTID的方案做了这样的设计：
 
 \2. 超时返回 1。
 
+在前面等位点的方案中，我们执行完事务后，还要主动去主库执行 show master status。而 MySQL 5.7.6 版本开始，允许在执行完更新类事务后，把这个事务的 GTID 返回给客户端，这样等 GTID 的方案就可以减少一次查询。
+
 等 GTID 的执行流程就变成了：
 
 \1. trx1 事务更新完成后，从返回包直接获取这个事务的 GTID，记为 gtid1；
@@ -813,7 +1080,7 @@ GTID的方案做了这样的设计：
 
 产生这个疑问的原因，是搞混了**并发连接和并发查询。**
 
-并发连接和并发查询，并不是同一个概念。你在 show processlist 的结果里，看到的几千个连接，指的就是并发连接。而“当前正在执行”的语句，才是我们所说的并发查询。
+> max_connections 才是并发连接
 
 并发连接和并发查询，并不是同一个概念。你在 show processlist 的结果里，看到的几千个连接，指的就是并发连接。而“当前正在执行”的语句，才是我们所说的并发查询。
 
@@ -838,3 +1105,65 @@ GTID的方案做了这样的设计：
 针对磁盘利用率这个问题，如果 MySQL 可以告诉我们，内部每一次 IO 请求的时间，那我们判断数据库是否出问题的方法就可靠得多了。
 
 其实，MySQL 5.6 版本以后提供的 performance_schema 库，就在file_summary_by_event_name 表里统计了每次 IO 请求的时间。
+
+# 数据处理
+
+### **全表扫描对** **server** **层的影响**
+
+假设，我们现在要对一个 200G 的 InnoDB 表 db1. t，执行一个全表扫描。
+
+InnoDB 的数据是保存在主键索引上的，所以全表扫描实际上是直接扫描表t 的主键索引。这条查询语句由于没有其他的判断条件，所以查到的每一行都可以直接放到结果集里面，然后返回给客户端
+
+实际上，服务端并不需要保存一个完整的结果集。取数据和发数据的流程是这样的：
+
+1. 获取一行，写到 net_buffer 中。这块内存的大小是由参数 net_buffer_length 定义的，默认是 16k。
+
+2. 重复获取行，直到 net_buffer 写满，调用网络接口发出去。
+
+3. 如果发送成功，就清空 net_buffer，然后继续取下一行，并写入 net_buffer。
+
+4. 如果发送函数返回 EAGAIN 或 WSAEWOULDBLOCK，就表示本地网络栈（socketsend buffer）写满了，进入等待。直到网络栈重新可写，再继续发送。
+
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.4c6ian527su0.webp)
+
+从这个流程中，你可以看到：
+
+1. 一个查询在发送过程中，占用的 MySQL 内部的内存最大就是 net_buffer_length 这么大，并不会达到 200G；
+
+2. socket send buffer 也不可能达到 200G（默认定义/proc/sys/net/core/wmem_default），如果 socket send buffer 被写满，就会暂停读数据的流程。
+
+也就是说，**MySQL 是“边读边发的”**，这个概念很重要。这就意味着，如果客户端接收得慢，会导致 MySQL 服务端由于结果发不出去，这个事务的执行时间变长。
+
+**如果客户端由于压力过大，迟迟不能接收数据，会对服务端造成什么严重的影响。**
+
+ 这个问题的核心是，造成了“**长事务**”。
+
+ 至于长事务的影响，就要结合我们前面文章中提到的锁、MVCC 的知识点了。
+
+- 如果前面的语句有更新，意味着它们在占用着行锁，会导致别的语句更新被锁住；
+
+- 当然读的事务也有问题，就是会导致 undo log 不能被回收，导致回滚段空间膨胀。
+
+### LRU算法
+
+![image](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/mysql/image.6vmnh8oxgak0.webp)
+
+在 InnoDB 实现上，按照 5:3 的比例把整个 LRU 链表分成了 young 区域和 old 区域。图中 LRU_old 指向的就是 old 区域的第一个位置，是整个链表的 5/8 处。也就是说，靠近链表头部的 5/8 是 young 区域，靠近链表尾部的 3/8 是 old 区域。
+
+处于 old 区域的数据页，每次被访问的时候都要做下面这个判断：
+
+若这个数据页在 LRU 链表中存在的时间超过了 1 秒，就把它移动到链表头部；
+
+如果这个数据页在 LRU 链表中存在的时间短于 1 秒，位置保持不变。1 秒这个时间，是由参数 innodb_old_blocks_time 控制的。其默认值是 1000，单位毫秒。
+
+
+
+这个策略，就是为了处理类似全表扫描的操作量身定制的。还是以刚刚的扫描 200G 的历史数据表为例，我们看看改进后的 LRU 算法的操作逻辑：
+
+1. 扫描过程中，需要新插入的数据页，都被放到 old 区域 ;
+
+2. 一个数据页里面有多条记录，这个数据页会被多次访问到，但由于是顺序扫描，这个数据页第一次被访问和最后一次被访问的时间间隔不会超过 1 秒，因此还是会被保留在old 区域；
+
+3. 再继续扫描后续的数据，之前的这个数据页之后也不会再被访问到，于是始终没有机会
+
+移到链表头部（也就是 young 区域），很快就会被淘汰出去。可以看到，这个策略最大的收益，就是在扫描这个大表的过程中，虽然也用到了 BufferPool，但是对 young 区域完全没有影响，从而保证了 Buffer Pool 响应正常业务的查询命中率。

@@ -80,7 +80,7 @@ public void checkAndLock() {
 
 性能跟我们手写的区别不大。
 
-![1606958454966](https://cdn.staticaly.com/gh/L1Chenxv/picx-images-hosting@master/redis/1606958454966.49egviwasgc0.webp)
+![1606958454966](https://cdn.statically.io/gh/L1Chenxv/picx-images-hosting@master/redis/1606958454966.49egviwasgc0.webp)
 
 ### 公平锁（Fair Lock）
 
@@ -162,6 +162,209 @@ boolean res = rwlock.writeLock().tryLock(100, 10, TimeUnit.SECONDS);
 ...
 lock.unlock();
 ```
+
+
+
+#### **Redisson加读锁逻辑原理**
+
+```java
+public class RedissonReadLock extends RedissonLock implements RLock {
+    @Override
+    <T> RFuture<T> tryLockInnerAsync(long leaseTime, TimeUnit unit, long threadId, RedisStrictCommand<T> command) {
+        // 内部锁的租期时间 单位unit
+        internalLockLeaseTime = unit.toMillis(leaseTime);
+
+        return commandExecutor.evalWriteAsync(getName(), LongCodec.INSTANCE, command,
+                                              //首先检查当前锁的模式（mode）
+                                "local mode = redis.call('hget', KEYS[1], 'mode'); " +
+                                              //如果不存在（mode == false），
+                                              //则表示没有其他线程正在持有锁，可以直接获取读锁
+                                "if (mode == false) then " +
+                                              // 设置锁的模式为 'read'，然后设置锁的租期
+                                  "redis.call('hset', KEYS[1], 'mode', 'read'); " +
+                                  "redis.call('hset', KEYS[1], ARGV[2], 1); " +
+                                  "redis.call('set', KEYS[2] .. ':1', 1); " +
+                                  "redis.call('pexpire', KEYS[2] .. ':1', ARGV[1]); " +
+                                  "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+                                              // 返回 nil 表示成功获取锁
+                                  "return nil; " +
+                                "end; " +
+                                              //如果锁的模式是 'read' 或者是 'write' 并且当前线程已经获取了写锁，
+                                              //则表示当前线程可以再次获取读锁
+                                "if (mode == 'read') or (mode == 'write' and redis.call('hexists', KEYS[1], ARGV[3]) == 1) then " +
+                                              // 递增当前线程获取读锁的计数，并设置锁的租期
+                                  "local ind = redis.call('hincrby', KEYS[1], ARGV[2], 1); " + 
+                                  "local key = KEYS[2] .. ':' .. ind;" +
+                                              // 设置当前线程string
+                                  "redis.call('set', key, 1); " +
+                                  "redis.call('pexpire', key, ARGV[1]); " +
+                                  "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+                                              // 返回 nil 表示成功获取锁
+                                  "return nil; " +
+                                "end;" +
+                                              // 如果无法获取读锁，表示锁已被其他线程占用，此时返回锁的剩余租期时间
+                                "return redis.call('pttl', KEYS[1]);",
+                        Arrays.<Object>asList(getName(), getReadWriteTimeoutNamePrefix(threadId)), 
+                        internalLockLeaseTime, getLockName(threadId), getWriteLockName(threadId));
+    }
+}
+```
+
+> **KEYS：**
+>
+> - KEYS[1](https://cloud.tencent.com/developer/tools/blog-entry?target=https://www.cnblogs.com/wang-meng/): `getName()` = anyLock
+> - KEYS[2]: `getReadWriteTimeoutNamePrefix(threadId)` =  {anyLock}:UUID_01:threadId_01:rwlock_timeout
+>
+> **ARGV：**
+>
+> - ARGV[1](https://cloud.tencent.com/developer/tools/blog-entry?target=https://www.cnblogs.com/wang-meng/): internalLockLeaseTime = 30000毫秒
+> - ARGV[2]: getLockName(threadId) = UUID_01:threadId_01
+> - ARGV[3]: getWriteLockName(threadId) = UUID_01:threadId_01:write
+
+**客户端A（UUID_01:threadId_01）来加读锁**
+
+当执行上述lua脚本后：
+
+```java
+anyLock: {
+  "mode": "read",
+  "UUID_01:threadId_01": 1
+}
+
+{anyLock}:UUID_01:threadId_01:rwlock_timeout:1  1
+```
+
+**客户端A 第二次来加读锁**
+
+```java
+anyLock: {
+  “mode”: “read”,
+  “UUID_01:threadId_01”: 2
+}
+
+{anyLock}:UUID_01:threadId_01:rwlock_timeout:1  1
+{anyLock}:UUID_01:threadId_01:rwlock_timeout:2  1
+```
+
+**客户端B （UUID_02:threadId_02）第一次来加读锁**
+
+```java
+anyLock: {
+  "mode": "read",
+  "UUID_01:threadId_01": 2,
+  "UUID_02:threadId_02": 1
+}
+
+{anyLock}:UUID_01:threadId_01:rwlock_timeout:1  1
+{anyLock}:UUID_01:threadId_01:rwlock_timeout:2  1
+{anyLock}:UUID_02:threadId_02:rwlock_timeout:1  1
+```
+
+#### **Redisson加写锁逻辑原理**
+
+```java
+public class RedissonWriteLock extends RedissonLock implements RLock {
+    @Override
+    <T> RFuture<T> tryLockInnerAsync(long leaseTime, TimeUnit unit, long threadId, RedisStrictCommand<T> command) {
+        // 内部锁的租期时间 单位unit
+        internalLockLeaseTime = unit.toMillis(leaseTime);
+
+        return commandExecutor.evalWriteAsync(getName(), LongCodec.INSTANCE, command,
+                                              // 首先检查当前锁的模式（mode）
+                            "local mode = redis.call('hget', KEYS[1], 'mode'); " +
+                                              // 如果不存在（mode == false），则表示没有其他线程正在持有锁，
+                                              // 可以直接获取写锁
+                            "if (mode == false) then " +
+                                  "redis.call('hset', KEYS[1], 'mode', 'write'); " +
+                                  "redis.call('hset', KEYS[1], ARGV[2], 1); " +
+                                  "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+                                  "return nil; " +
+                              "end; " +
+                                              // 如果锁的模式是 'write'，表示当前线程已经获取了写锁
+                              "if (mode == 'write') then " +
+                                  "if (redis.call('hexists', KEYS[1], ARGV[2]) == 1) then " +
+                                              // 直接递增当前线程获取写锁的计数，并更新锁的租期
+                                      "redis.call('hincrby', KEYS[1], ARGV[2], 1); " + 
+                                      "local currentExpire = redis.call('pttl', KEYS[1]); " +
+                                      "redis.call('pexpire', KEYS[1], currentExpire + ARGV[1]); " +
+                                      "return nil; " +
+                                  "end; " +
+                                "end;" +
+                                              // 如果无法获取写锁，表示锁已被其他线程占用，此时返回锁的剩余租期时间
+                                "return redis.call('pttl', KEYS[1]);",
+                        Arrays.<Object>asList(getName()), 
+                        internalLockLeaseTime, getLockName(threadId));
+    }
+}
+```
+
+> KEYS和ARGV参数：
+>
+> - KEYS[1](https://cloud.tencent.com/developer/tools/blog-entry?target=https://www.cnblogs.com/wang-meng/) = anyLock
+> - ARGV[1](https://cloud.tencent.com/developer/tools/blog-entry?target=https://www.cnblogs.com/wang-meng/) = 30000
+> - ARGV[2] = UUID_01:threadId_01:write
+>
+> 1. hget anyLock mode，此时没人加锁，mode=false
+> 2. hset anyLock mode write
+> 3. hset anyLock UUID_01:threadId_01:write 1
+> 4. pexpire anyLock 30000
+
+**客户端A加写锁**
+
+```java
+anyLock: {
+    "mode": "write",
+    "UUID_01:threadId_01:write": 1
+}
+```
+
+**客户端A和客户端B，先后加读锁，客户端C来加写锁**
+
+```java
+anyLock: {
+  "mode": "read",
+  "UUID_01:threadId_01": 1,
+  "UUID_02:threadId_02": 1
+}
+
+{anyLock}:UUID_01:threadId_01:rwlock_timeout:1    1
+{anyLock}:UUID_02:threadId_02:rwlock_timeout:1    1
+```
+
+客户端C加锁失败，就会不断的尝试重试去加锁
+
+**客户端A先加写锁、客户端A接着加读锁**
+
+```java
+anyLock: {
+  "mode": "write",
+  "UUID_01:threadId_01:write": 1,
+  "UUID_01:threadId_01": 1
+}
+
+{anyLock}:UUID_01:threadId_01:rwlock_timeout:1    1
+```
+
+**客户端A先加读锁、客户端A接着加写锁**
+
+![image.png](https://ask.qcloudimg.com/http-save/yehe-1020141/5riey7039h.png)
+
+此时客户端A先加的读锁，mode=read，所以再次加写锁是不能成功的
+
+如果是同一个客户端同一个线程，先加了一次写锁，然后加读锁，是可以加成功的，默认是在同一个线程写锁的期间，可以多次加读锁
+
+而同一个客户端同一个线程，先加了一次读锁，是不允许再被加写锁的
+
+#### 总结
+
+显然还有写锁与写锁互斥的逻辑就不分析了，通过上面一些场景的分析，我们可以知道：
+
+- 读锁与读锁非互斥
+- 读锁与写锁互斥
+- 写锁与写锁互斥
+- 读读、写写 同个客户端同个线程都可重入
+- 先写锁再加读锁可重入
+- 先读锁再写锁不可重入
 
 ### 2.10.6. 信号量（Semaphore）
 
